@@ -117,8 +117,11 @@ public class SnipeApiDownloader : EditorWindow
 
 internal class LoginResponseData
 {
-	public string errorCode;
+	#pragma warning disable 0649
+	// public string errorCode;
 	public string token;
+	
+	#pragma warning restore 0649
 }
 
 #endif // UNITY_EDITOR
