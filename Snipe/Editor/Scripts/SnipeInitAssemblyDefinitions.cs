@@ -10,6 +10,8 @@ public class SnipeInitAssemblyDefinitions
 	[MenuItem("Snipe/Initialize Assembly Definitions")]
 	public static void Process()
 	{
+		bool created = false;
+		
 		string gpg_directory = $"{Application.dataPath}/GooglePlayGames";
 		if (Directory.Exists(gpg_directory))
 		{
@@ -19,6 +21,7 @@ public class SnipeInitAssemblyDefinitions
 				var file_writer = File.CreateText(asmdef_file);
 				file_writer.WriteLine("{");
 				file_writer.WriteLine("\t\"name\": \"MiniIT.GooglePlay.Runtime\",");
+				file_writer.WriteLine("\t\"includePlatforms\": [],");
 				file_writer.WriteLine("\t\"precompiledReferences\": [],");
 				file_writer.WriteLine("\t\"allowUnsafeCode\": false,");
 				file_writer.WriteLine("\t\"overrideReferences\": false,");
@@ -26,6 +29,8 @@ public class SnipeInitAssemblyDefinitions
 				file_writer.WriteLine("\t\"noEngineReferences\": false");
 				file_writer.WriteLine("}");
 				file_writer.Close();
+				
+				created = true;
 			}
 
 			asmdef_file = $"{gpg_directory}/Editor/MiniIT.GooglePlay.Editor.asmdef";
@@ -43,9 +48,12 @@ public class SnipeInitAssemblyDefinitions
 				file_writer.WriteLine("\t\"noEngineReferences\": false");
 				file_writer.WriteLine("}");
 				file_writer.Close();
+				
+				created = true;
 			}
 		}
 
+		/*
 		string facebook_directory = $"{Application.dataPath}/FacebookSDK";
 		if (Directory.Exists(facebook_directory))
 		{
@@ -64,7 +72,15 @@ public class SnipeInitAssemblyDefinitions
 				file_writer.WriteLine("\t\"noEngineReferences\": false");
 				file_writer.WriteLine("}");
 				file_writer.Close();
+				
+				created = true;
 			}
+		}
+		*/
+		
+		if (created)
+		{
+			AssetDatabase.Refresh();
 		}
 	}
 }
