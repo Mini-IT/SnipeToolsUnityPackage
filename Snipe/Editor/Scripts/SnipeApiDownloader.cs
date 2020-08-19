@@ -86,7 +86,7 @@ public class SnipeApiDownloader : EditorWindow
 		Process process = new Process();
 		process.StartInfo.WorkingDirectory = Application.dataPath + "/..";
 		process.StartInfo.FileName = "curl";
-		process.StartInfo.Arguments = $"-s -X POST \"https://edit-dev.snipe.dev/api/v1/auth\" -d \"login={mLogin}&password={mPassword}\"";
+		process.StartInfo.Arguments = $"-s -X POST \"https://edit.snipe.dev/api/v1/auth\" -d \"login={mLogin}&password={mPassword}\"";
 		process.StartInfo.UseShellExecute = false;
 		process.StartInfo.RedirectStandardOutput = true;
 		process.Start();
@@ -108,7 +108,7 @@ public class SnipeApiDownloader : EditorWindow
 		process = new Process();
 		process.StartInfo.WorkingDirectory = mDirectoryPath;
 		process.StartInfo.FileName = "curl";
-		process.StartInfo.Arguments = $"-o SnipeApi.cs -H \"Authorization: Bearer {token}\" \"https://edit-dev.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings\"";
+		process.StartInfo.Arguments = $"-o SnipeApi.cs -H \"Authorization: Bearer {token}\" \"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings\"";
 		process.Start();
 
 		UnityEngine.Debug.Log("DownloadSnipeApi - done");
