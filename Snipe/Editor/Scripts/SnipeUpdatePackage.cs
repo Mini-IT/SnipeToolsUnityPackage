@@ -9,7 +9,7 @@ public class SnipeUpdatePackage
 {
 	private static AddRequest mRequest;
 
-	[MenuItem("Snipe/Force Update Package")]
+	[MenuItem("Snipe/Install Snipe Package")]
 	public static void RemoveSnipeLockSection()
 	{
 		if (mRequest != null)

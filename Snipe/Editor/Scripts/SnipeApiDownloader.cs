@@ -12,6 +12,7 @@ public class SnipeApiDownloader : EditorWindow
 	private string mDirectoryPath;
 	private string mLogin;
 	private string mPassword;
+	private bool mSnipeV5 = false;
 
 	private string mPrefsPrefix;
 
@@ -38,6 +39,7 @@ public class SnipeApiDownloader : EditorWindow
 		mDirectoryPath = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
 		mLogin = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.login", mLogin);
 		mPassword = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.password", mPassword);
+		mSnipeV5 = EditorPrefs.GetInt($"{mPrefsPrefix}_SnipeApiDownloader.snipe_v5", mSnipeV5 ? 1 : 0) == 1;
 
 		if (string.IsNullOrEmpty(mDirectoryPath))
 			mDirectoryPath = Application.dataPath;
@@ -49,6 +51,7 @@ public class SnipeApiDownloader : EditorWindow
 		EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
 		EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.login", mLogin);
 		EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.password", mPassword);
+		EditorPrefs.SetInt($"{mPrefsPrefix}_SnipeApiDownloader.snipe_v5", mSnipeV5 ? 1 : 0);
 	}
 
 	void OnGUI()
@@ -68,14 +71,18 @@ public class SnipeApiDownloader : EditorWindow
 		GUILayout.EndHorizontal();
 
 		mLogin = EditorGUILayout.TextField("Login", mLogin);
-		mPassword = EditorGUILayout.TextField("Password", mPassword);
+		mPassword = EditorGUILayout.PasswordField("Password", mPassword);
 
 		EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(mLogin) || string.IsNullOrEmpty(mPassword));
+		GUILayout.BeginHorizontal();
+		mSnipeV5 = EditorGUILayout.Toggle("Snipe V5", mSnipeV5);
+		
 		if (GUILayout.Button("Download"))
 		{
 			DownloadSnipeApi();
 			this.Close();
 		}
+		GUILayout.EndHorizontal();
 		EditorGUI.EndDisabledGroup();
 	}
 
@@ -108,7 +115,7 @@ public class SnipeApiDownloader : EditorWindow
 		process = new Process();
 		process.StartInfo.WorkingDirectory = mDirectoryPath;
 		process.StartInfo.FileName = "curl";
-		process.StartInfo.Arguments = $"-o SnipeApi.cs -H \"Authorization: Bearer {token}\" \"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings\"";
+		process.StartInfo.Arguments = $"-o SnipeApi.cs -H \"Authorization: Bearer {token}\" \"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{(mSnipeV5 ? "V5" : "")}\"";
 		process.Start();
 
 		UnityEngine.Debug.Log("DownloadSnipeApi - done");
