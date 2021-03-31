@@ -13,16 +13,11 @@ public class SnipeApiDownloader : EditorWindow
 	private string mLogin;
 	private string mPassword;
 	private bool mSnipeV5 = false;
+	private bool mGetTablesList = true;
 
-	private string mPrefsPrefix;
-
-	[MenuItem("Snipe/Download SnipeApi")]
-	public static void ShowWindow()
-	{
-		EditorWindow.GetWindow(typeof(SnipeApiDownloader));
-	}
-
-	protected void OnEnable()
+	private static string mPrefsPrefix;
+	
+	public static string RefreshPrefsPrefix()
 	{
 		if (string.IsNullOrEmpty(mPrefsPrefix))
 		{
@@ -34,6 +29,19 @@ public class SnipeApiDownloader : EditorWindow
 			}
 			mPrefsPrefix = builder.ToString();
 		}
+		
+		return mPrefsPrefix;
+	}
+
+	[MenuItem("Snipe/Download SnipeApi")]
+	public static void ShowWindow()
+	{
+		EditorWindow.GetWindow(typeof(SnipeApiDownloader));
+	}
+
+	protected void OnEnable()
+	{
+		RefreshPrefsPrefix();
 
 		mProjectId = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
 		mDirectoryPath = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
@@ -76,16 +84,25 @@ public class SnipeApiDownloader : EditorWindow
 		EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(mLogin) || string.IsNullOrEmpty(mPassword));
 		GUILayout.BeginHorizontal();
 		mSnipeV5 = EditorGUILayout.Toggle("Snipe V5", mSnipeV5);
+		mGetTablesList = EditorGUILayout.Toggle("Get tables list", mGetTablesList);
 		
 		if (GUILayout.Button("Download"))
 		{
-			DownloadSnipeApi();
-			this.Close();
+			DownloadSnipeApiAndClose();
 		}
 		GUILayout.EndHorizontal();
 		EditorGUI.EndDisabledGroup();
 	}
 
+	private async void DownloadSnipeApiAndClose()
+	{
+		DownloadSnipeApi();
+		if (mGetTablesList)
+		{
+			await SnipeTablesPreloadHelper.DownloadTablesList();
+		}
+		this.Close();
+	}
 	public void DownloadSnipeApi()
 	{
 		UnityEngine.Debug.Log("DownloadSnipeApi - start");
