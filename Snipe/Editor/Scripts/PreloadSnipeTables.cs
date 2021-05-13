@@ -39,6 +39,11 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 	{
 		return Path.Combine(Application.dataPath, "snipe_tables.txt");
 	}
+	
+	private static string GetTablesVersionFilePath()
+	{
+		return Path.Combine(Application.streamingAssetsPath, "snipe_tables_version.txt");
+	}
 
 	// [MenuItem ("Snipe/Preload Tables")]
 	public static void Load()
@@ -82,6 +87,10 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 			}
 		}
 		
+		string version_file_path = GetTablesVersionFilePath();
+		if (File.Exists(version_file_path))
+			File.Delete(version_file_path);
+		
 		Task.Run(async () => { await LoadVersion(); }).Wait(10000);
 		
 		if (!string.IsNullOrEmpty(mVersion))
@@ -120,6 +129,12 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 			using (var reader = new StreamReader(await loader_task.Result.Content.ReadAsStreamAsync()))
 			{
 				mVersion = reader.ReadLine().Trim();
+			}
+			
+			if (!string.IsNullOrEmpty(mVersion))
+			{
+				// save to file
+				File.WriteAllText(GetTablesVersionFilePath(), mVersion);
 			}
 		}
 		catch (Exception)
