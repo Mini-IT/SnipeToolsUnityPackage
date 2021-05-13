@@ -97,6 +97,7 @@ public class SnipeApiDownloader : EditorWindow
 	private async void DownloadSnipeApiAndClose()
 	{
 		DownloadSnipeApi();
+		await System.Threading.Tasks.Task.Yield();
 		if (mGetTablesList)
 		{
 			await SnipeTablesPreloadHelper.DownloadTablesList();
