@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -8,13 +9,15 @@ using UnityEditor;
 
 public class SnipeApiDownloader : EditorWindow
 {
+	private static readonly string[] SNIPE_VERSIONS = new string[] { "V5", "V6" };
+
 	private string mProjectId = "1";
 	private string mDirectoryPath;
 	private string mLogin;
 	private string mPassword;
-	private bool mSnipeV5 = false;
+	private string mSnipeVersionSuffix = SNIPE_VERSIONS[0]; //"V5";
 	private bool mGetTablesList = true;
-
+	
 	private static string mPrefsPrefix;
 	
 	public static string RefreshPrefsPrefix()
@@ -47,7 +50,7 @@ public class SnipeApiDownloader : EditorWindow
 		mDirectoryPath = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
 		mLogin = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.login", mLogin);
 		mPassword = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.password", mPassword);
-		mSnipeV5 = EditorPrefs.GetInt($"{mPrefsPrefix}_SnipeApiDownloader.snipe_v5", mSnipeV5 ? 1 : 0) == 1;
+		mSnipeVersionSuffix = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 
 		if (string.IsNullOrEmpty(mDirectoryPath))
 			mDirectoryPath = Application.dataPath;
@@ -59,7 +62,7 @@ public class SnipeApiDownloader : EditorWindow
 		EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
 		EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.login", mLogin);
 		EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.password", mPassword);
-		EditorPrefs.SetInt($"{mPrefsPrefix}_SnipeApiDownloader.snipe_v5", mSnipeV5 ? 1 : 0);
+		EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 	}
 
 	void OnGUI()
@@ -82,9 +85,14 @@ public class SnipeApiDownloader : EditorWindow
 		mPassword = EditorGUILayout.PasswordField("Password", mPassword);
 
 		EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(mLogin) || string.IsNullOrEmpty(mPassword));
-		GUILayout.BeginHorizontal();
-		mSnipeV5 = EditorGUILayout.Toggle("Snipe V5", mSnipeV5);
+
 		mGetTablesList = EditorGUILayout.Toggle("Get tables list", mGetTablesList);
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Label("Snipe Version");
+		int index = Array.IndexOf(SNIPE_VERSIONS, mSnipeVersionSuffix);
+		index = EditorGUILayout.Popup(index, SNIPE_VERSIONS);
+		mSnipeVersionSuffix = SNIPE_VERSIONS[index];
 		
 		if (GUILayout.Button("Download"))
 		{
@@ -133,7 +141,7 @@ public class SnipeApiDownloader : EditorWindow
 		process = new Process();
 		process.StartInfo.WorkingDirectory = mDirectoryPath;
 		process.StartInfo.FileName = "curl";
-		process.StartInfo.Arguments = $"-o SnipeApi.cs -H \"Authorization: Bearer {token}\" \"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{(mSnipeV5 ? "V5" : "")}\"";
+		process.StartInfo.Arguments = $"-o SnipeApi.cs -H \"Authorization: Bearer {token}\" \"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{mSnipeVersionSuffix}\"";
 		process.Start();
 
 		UnityEngine.Debug.Log("DownloadSnipeApi - done");
