@@ -45,25 +45,33 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 		return Path.Combine(Application.streamingAssetsPath, "snipe_tables_version.txt");
 	}
 
-	// [MenuItem ("Snipe/Preload Tables")]
+	[MenuItem ("Snipe/Preload Tables")]
 	public static void Load()
 	{
 		Debug.Log("[PreloadSnipeTables] - started");
 		
 		mStreamingAssetsPath = Application.streamingAssetsPath;
 		
-		mTableNames = new List<string>();
-		using (StreamReader sr = File.OpenText(GetTableListFilePath()))
-        {
-            string s = "";
-            while (!string.IsNullOrEmpty(s = sr.ReadLine()))
-            {
-				if (s.ToLower().StartsWith("http") && s.Contains("://"))
-					mTablesUrl = s;
-				else
-					mTableNames.Add(s);
-            }
-        }
+		var filepath = GetTableListFilePath();
+		if (File.Exists(filepath))
+		{
+			mTableNames = new List<string>();
+			using (StreamReader sr = File.OpenText(filepath))
+			{
+				string s = "";
+				while (!string.IsNullOrEmpty(s = sr.ReadLine()))
+				{
+					if (s.ToLower().StartsWith("http") && s.Contains("://"))
+						mTablesUrl = s;
+					else
+						mTableNames.Add(s);
+				}
+			}
+		}
+		else
+		{
+			mTableNames = null;
+		}
 		
 		if (mTableNames == null || mTableNames.Count == 0)
 		{
