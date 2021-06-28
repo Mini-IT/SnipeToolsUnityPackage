@@ -67,11 +67,13 @@ public class SnipeApiDownloader : EditorWindow
 
 	void OnGUI()
 	{
+		EditorGUIUtility.labelWidth = 100;
+		
 		mProjectId = EditorGUILayout.TextField("Project ID", mProjectId);
 
 		GUILayout.BeginHorizontal();
 		mDirectoryPath = EditorGUILayout.TextField("Directory", mDirectoryPath);
-		if (GUILayout.Button("..."))
+		if (GUILayout.Button("...", GUILayout.Width(40)))
 		{
 			string path = EditorUtility.SaveFolderPanel("Choose location of SnipeApi.cs", mDirectoryPath, "");
 			if (!string.IsNullOrEmpty(path))
@@ -88,17 +90,21 @@ public class SnipeApiDownloader : EditorWindow
 
 		mGetTablesList = EditorGUILayout.Toggle("Get tables list", mGetTablesList);
 
-		GUILayout.BeginHorizontal();
-		GUILayout.Label("Snipe Version");
+		EditorGUILayout.BeginHorizontal();
+		
+		GUILayout.Label("Snipe Version", GUILayout.Width(EditorGUIUtility.labelWidth));
+		
 		int index = Array.IndexOf(SNIPE_VERSIONS, mSnipeVersionSuffix);
 		index = EditorGUILayout.Popup(index, SNIPE_VERSIONS);
 		mSnipeVersionSuffix = SNIPE_VERSIONS[index];
 		
+		GUILayout.FlexibleSpace();
+
 		if (GUILayout.Button("Download"))
 		{
 			DownloadSnipeApiAndClose();
 		}
-		GUILayout.EndHorizontal();
+		EditorGUILayout.EndHorizontal();
 		EditorGUI.EndDisabledGroup();
 	}
 
