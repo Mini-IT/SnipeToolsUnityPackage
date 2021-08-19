@@ -27,7 +27,7 @@ public class SnipeTablesPreloadHelper
 		return $"https://static-dev.snipe.dev/{project_string_id}/";
 	}
 
-	[MenuItem("Snipe/Download Tables List")]
+	// [MenuItem("Snipe/Download Tables List")]
 	public static async Task DownloadTablesList()
 	{
 		await DownloadTablesList(null);
