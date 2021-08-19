@@ -4,6 +4,11 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEditor;
 
@@ -19,7 +24,9 @@ public class SnipeApiDownloader : EditorWindow
 	private bool mGetTablesList = true;
 	
 	private static string mPrefsPrefix;
-	
+
+	private string mToken;
+
 	public static string RefreshPrefsPrefix()
 	{
 		if (string.IsNullOrEmpty(mPrefsPrefix))
@@ -110,47 +117,65 @@ public class SnipeApiDownloader : EditorWindow
 
 	private async void DownloadSnipeApiAndClose()
 	{
-		DownloadSnipeApi();
+		await DownloadSnipeApi();
 		await System.Threading.Tasks.Task.Yield();
 		if (mGetTablesList)
 		{
-			await SnipeTablesPreloadHelper.DownloadTablesList();
+			await SnipeTablesPreloadHelper.DownloadTablesList(mToken);
 		}
+		AssetDatabase.Refresh();
 		this.Close();
 	}
-	public void DownloadSnipeApi()
+
+	public async Task DownloadSnipeApi()
 	{
 		UnityEngine.Debug.Log("DownloadSnipeApi - start");
 
-		Process process = new Process();
-		process.StartInfo.WorkingDirectory = Application.dataPath + "/..";
-		process.StartInfo.FileName = "curl";
-		process.StartInfo.Arguments = $"-s -X POST \"https://edit.snipe.dev/api/v1/auth\" -d \"login={mLogin}&password={mPassword}\"";
-		process.StartInfo.UseShellExecute = false;
-		process.StartInfo.RedirectStandardOutput = true;
-		process.Start();
-
-		StreamReader reader = process.StandardOutput;
-		string output = reader.ReadToEnd();
-
-		UnityEngine.Debug.Log("output " + output);
-
-		LoginResponseData response = new LoginResponseData();
-		UnityEditor.EditorJsonUtility.FromJsonOverwrite(output, response);
-		string token = response.token;
-		if (string.IsNullOrEmpty(token))
+		mToken = await RequestAuthToken();
+		if (string.IsNullOrEmpty(mToken))
 		{
 			UnityEngine.Debug.Log("DownloadSnipeApi - FAILED to get token");
 			return;
 		}
-
-		process = new Process();
-		process.StartInfo.WorkingDirectory = mDirectoryPath;
-		process.StartInfo.FileName = "curl";
-		process.StartInfo.Arguments = $"-o SnipeApi.cs -H \"Authorization: Bearer {token}\" \"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{mSnipeVersionSuffix}\"";
-		process.Start();
+		
+		using (var api_client = new HttpClient())
+		{
+			api_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", mToken);
+			var response = await api_client.GetAsync($"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{mSnipeVersionSuffix}");
+			
+			using (StreamWriter sw = File.CreateText(Path.Combine(mDirectoryPath, "SnipeApi.cs")))
+			{
+				await response.Content.CopyToAsync(sw.BaseStream);
+			}
+		}
 
 		UnityEngine.Debug.Log("DownloadSnipeApi - done");
+	}
+
+	public static async Task<string> RequestAuthToken()
+	{
+		RefreshPrefsPrefix();
+		string login = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.login");
+		string password = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.password");
+
+		var loader = new HttpClient();
+		var request_data = new StringContent($"{{\"login\":\"{login}\",\"password\":\"{password}\"}}", Encoding.UTF8, "application/json");
+		var loader_task = loader.PostAsync("https://edit.snipe.dev/api/v1/auth", request_data);
+		var loader_response = await loader_task;
+
+		if (loader_task.IsFaulted || loader_task.IsCanceled)
+		{
+			UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] Failed to auth");
+			return null;
+		}
+
+		string content = loader_response.Content.ReadAsStringAsync().Result;
+		UnityEngine.Debug.Log(content);
+
+		var response = new SnipeAuthLoginResponseData();
+		UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response);
+
+		return response.token;
 	}
 }
 

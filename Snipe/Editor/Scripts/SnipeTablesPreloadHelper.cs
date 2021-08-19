@@ -27,16 +27,26 @@ public class SnipeTablesPreloadHelper
 		return $"https://static-dev.snipe.dev/{project_string_id}/";
 	}
 
-	// [MenuItem ("Snipe/Download Tables List")]
+	[MenuItem("Snipe/Download Tables List")]
 	public static async Task DownloadTablesList()
 	{
+		await DownloadTablesList(null);
+	}
+
+	public static async Task DownloadTablesList(string token)
+	{
 		UnityEngine.Debug.Log("[SnipeTablesPreloadHelper] DownloadResponseList - start");
-		
-		string token = await RequestAuthToken();
+
 		if (string.IsNullOrEmpty(token))
 		{
-			UnityEngine.Debug.Log("[SnipeTablesPreloadHelper] - FAILED to get token");
-			return;
+			UnityEngine.Debug.Log("[SnipeTablesPreloadHelper] DownloadResponseList - request token");
+
+			token = await SnipeApiDownloader.RequestAuthToken();
+			if (string.IsNullOrEmpty(token))
+			{
+				UnityEngine.Debug.Log("[SnipeTablesPreloadHelper] - FAILED to get token");
+				return;
+			}
 		}
 		
 		RefreshPrefsPrefix();
@@ -47,6 +57,8 @@ public class SnipeTablesPreloadHelper
 		
 		if (!string.IsNullOrEmpty(project_id))
 		{
+			UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] Fetching projects list");
+			
 			using (var projects_list_client = new HttpClient())
 			{
 				projects_list_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -72,6 +84,8 @@ public class SnipeTablesPreloadHelper
 				UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] Project StringID = {project_string_id}");
 			}
 			
+			UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] Fetching tables list for project {project_string_id}");
+			
 			using (var client = new HttpClient())
 			{
 				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -89,53 +103,36 @@ public class SnipeTablesPreloadHelper
 						FileUtil.DeleteFileOrDirectory(file_path);
 					}
 					
-					using (StreamWriter sw = File.CreateText(file_path))
-					{					
-						foreach (var item in list)
-						{
-							string table_name = item.stringID;
-							if (!string.IsNullOrEmpty(table_name))
+					UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] tables count = {list.Count}");
+					
+					//if (list.Count > 0)
+					{
+						using (StreamWriter sw = File.CreateText(file_path))
+						{					
+							foreach (var item in list)
 							{
-								sw.WriteLine(table_name);
+								string table_name = item.stringID;
+								if (!string.IsNullOrEmpty(table_name))
+								{
+									sw.WriteLine(table_name);
+								}
+							}
+							
+							if (!string.IsNullOrEmpty(project_string_id))
+							{
+								sw.WriteLine(GetTablesUrl(project_string_id));
 							}
 						}
-						
-						if (!string.IsNullOrEmpty(project_string_id))
-						{
-							sw.WriteLine(GetTablesUrl(project_string_id));
-						}
 					}
+					// else
+					// {
+						// UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] No tables found");
+					// }
 				}
 			}
 		}
 		
 		UnityEngine.Debug.Log("[SnipeTablesPreloadHelper] DownloadResponseList - done");
-	}
-	
-	public static async Task<string> RequestAuthToken()
-	{
-		RefreshPrefsPrefix();
-		string login = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.login");
-		string password = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.password");
-		
-		var loader = new HttpClient();
-		var request_data = new StringContent($"{{\"login\":\"{login}\",\"password\":\"{password}\"}}", Encoding.UTF8, "application/json");
-		var loader_task = loader.PostAsync("https://edit.snipe.dev/api/v1/auth", request_data);
-		var loader_response = await loader_task;
-		
-		if (loader_task.IsFaulted || loader_task.IsCanceled)
-		{
-			Debug.Log($"[SnipeTablesPreloadHelper] Failed to auth");
-			return null;
-		}
-		
-		string content = loader_response.Content.ReadAsStringAsync().Result;
-		Debug.Log(content);
-		
-		var response = new SnipeAuthLoginResponseData();
-		UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response);
-		
-		return response.token;
 	}
 	
 	private static void RefreshPrefsPrefix()
