@@ -44,7 +44,7 @@ public class SnipeUpdater : EditorWindow
 	{
 		if (mBranches == null || mTags == null)
 		{
-			FetchBranchesList();
+			FetchVersionsList();
 		}
 	}
 
@@ -75,7 +75,7 @@ public class SnipeUpdater : EditorWindow
 			
 			if (GUILayout.Button("Fetch Versions"))
 			{
-				FetchBranchesList();
+				FetchVersionsList();
 			}
 			GUILayout.EndHorizontal();
 
@@ -103,8 +103,7 @@ public class SnipeUpdater : EditorWindow
 		}
 	}
 
-	// [MenuItem("Snipe/Fetch Branches List")]
-	public static async Task FetchBranchesList()
+	public static async Task FetchVersionsList()
 	{
 		mBranches = null;
 		mTags = null;
