@@ -30,11 +30,6 @@ public class SnipeUpdater : EditorWindow
 	private static int mCurrentVersionIndex;
 	private static int mSelectedVersionIndex;
 
-	public static string GetTableListFilePath()
-	{
-		return Path.Combine(Application.dataPath, "snipe_tables.txt");
-	}
-
 	[MenuItem("Snipe/Updater")]
 	public static void ShowWindow()
 	{
