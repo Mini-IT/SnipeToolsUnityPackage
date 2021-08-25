@@ -88,7 +88,7 @@ public class SnipeUpdater : EditorWindow
 				mSelectedSnipePackageVersionIndex = EditorGUILayout.Popup(mSelectedSnipePackageVersionIndex, mSnipePackageVersions);
 				
 				GUILayout.FlexibleSpace();
-				if (mSelectedSnipePackageVersionIndex >= 0 && GUILayout.Button("SWITCH"))
+				if (mSelectedSnipePackageVersionIndex >= 0 && GUILayout.Button("Switch / Update"))
 				{
 					string selected_vesion = mSnipePackageVersions[mSelectedSnipePackageVersionIndex];
 					string version_suffix = (selected_vesion == "master") ? "" : $"#{selected_vesion}";
