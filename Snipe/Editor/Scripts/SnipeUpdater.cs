@@ -17,8 +17,12 @@ using System.Threading.Tasks;
 public class SnipeUpdater : EditorWindow
 {
 	private const string API_BASE_URL = "https://api.github.com/repos/Mini-IT/SnipeUnityPackage/";
-	private const string PACKAGE_BASE_URL = "https://github.com/Mini-IT/SnipeUnityPackage.git";
-	private const string PACKAGE_NAME = "com.miniit.snipe.client";
+	
+	private const string SNIPE_PACKAGE_NAME = "com.miniit.snipe.client";
+	private const string SNIPE_PACKAGE_BASE_URL = "https://github.com/Mini-IT/SnipeUnityPackage.git";
+	
+	private const string TOOLS_PACKAGE_NAME = "com.miniit.snipe.tools";
+	private const string TOOLS_PACKAGE_BASE_URL = "https://github.com/Mini-IT/SnipeToolsUnityPackage.git";
 
 	private static ListRequest mPackageListRequest;
 	private static AddRequest mPackageAddRequest;
@@ -26,9 +30,9 @@ public class SnipeUpdater : EditorWindow
 	private static GitHubBranchesListWrapper mBranches;
 	private static GitHubTagsListWrapper mTags;
 
-	private static string[] mPackageVersions;
-	private static int mCurrentVersionIndex = -1;
-	private static int mSelectedVersionIndex;
+	private static string[] mSnipePackageVersions;
+	private static int mCurrentSnipePackageVersionIndex = -1;
+	private static int mSelectedSnipePackageVersionIndex;
 
 	[MenuItem("Snipe/Updater")]
 	public static void ShowWindow()
@@ -46,7 +50,7 @@ public class SnipeUpdater : EditorWindow
 
 	void OnGUI()
 	{
-		if (mPackageListRequest != null || mBranches == null || mTags == null || mPackageVersions == null)
+		if (mPackageListRequest != null || mBranches == null || mTags == null || mSnipePackageVersions == null)
 		{
 			EditorGUILayout.LabelField("Fetching... please wait...");
 		}
@@ -56,26 +60,40 @@ public class SnipeUpdater : EditorWindow
 		}
 		else
 		{
-			if (GUILayout.Button("Refresh"))
+			GUILayout.BeginHorizontal();
+			if (GUILayout.Button("Update Snipe Tools Package"))
+			{
+				var request = Client.Add($"{TOOLS_PACKAGE_BASE_URL}");
+				while (!request.IsCompleted)
+				{
+				}
+				if (request.Status == StatusCode.Success)
+				{
+					this.Close();
+				}
+			}
+			
+			if (GUILayout.Button("Fetch Versions"))
 			{
 				FetchBranchesList();
 			}
+			GUILayout.EndHorizontal();
 
-			if (mPackageVersions != null)
+			if (mSnipePackageVersions != null)
 			{
-				EditorGUILayout.LabelField($"Current version (detected): {(mCurrentVersionIndex >= 0 ? mPackageVersions[mCurrentVersionIndex] : "unknown")}");
+				EditorGUILayout.LabelField($"Current version (detected): {(mCurrentSnipePackageVersionIndex >= 0 ? mSnipePackageVersions[mCurrentSnipePackageVersionIndex] : "unknown")}");
 				
 				GUILayout.BeginHorizontal();
 				EditorGUILayout.LabelField("Version: ");
-				mSelectedVersionIndex = EditorGUILayout.Popup(mSelectedVersionIndex, mPackageVersions);
+				mSelectedSnipePackageVersionIndex = EditorGUILayout.Popup(mSelectedSnipePackageVersionIndex, mSnipePackageVersions);
 				
 				GUILayout.FlexibleSpace();
-				if (mSelectedVersionIndex >= 0 && GUILayout.Button("SWITCH"))
+				if (mSelectedSnipePackageVersionIndex >= 0 && GUILayout.Button("SWITCH"))
 				{
-					string selected_vesion = mPackageVersions[mSelectedVersionIndex];
+					string selected_vesion = mSnipePackageVersions[mSelectedSnipePackageVersionIndex];
 					string version_suffix = (selected_vesion == "master") ? "" : $"#{selected_vesion}";
 
-					mPackageAddRequest = Client.Add($"{PACKAGE_BASE_URL}{version_suffix}");
+					mPackageAddRequest = Client.Add($"{SNIPE_PACKAGE_BASE_URL}{version_suffix}");
 					EditorApplication.update -= OnEditorUpdate;
 					EditorApplication.update += OnEditorUpdate;
 				}
@@ -98,8 +116,8 @@ public class SnipeUpdater : EditorWindow
 		mTags = await RequestList<GitHubTagsListWrapper>("tags");
 
 		int items_count = (mBranches?.items?.Count ?? 0) + (mTags?.items?.Count ?? 0);
-		mPackageVersions = new string[items_count];
-		mSelectedVersionIndex = 0;
+		mSnipePackageVersions = new string[items_count];
+		mSelectedSnipePackageVersionIndex = 0;
 
 		int i = 0;
 		if (mBranches?.items != null)
@@ -107,7 +125,7 @@ public class SnipeUpdater : EditorWindow
 			foreach (var item in mBranches.items)
 			{
 				// UnityEngine.Debug.Log($"[SnipeUpdater] {item.name}");
-				mPackageVersions[i++] = item.name;
+				mSnipePackageVersions[i++] = item.name;
 			}
 		}
 		
@@ -118,7 +136,7 @@ public class SnipeUpdater : EditorWindow
 			foreach (var item in mTags.items)
 			{
 				// UnityEngine.Debug.Log($"[SnipeUpdater] {item.name}");
-				mPackageVersions[i++] = item.name;
+				mSnipePackageVersions[i++] = item.name;
 			}
 		}
 		
@@ -162,7 +180,7 @@ public class SnipeUpdater : EditorWindow
 				{
 					foreach (var item in mPackageListRequest.Result)
 					{
-						if (item.name == PACKAGE_NAME)
+						if (item.name == SNIPE_PACKAGE_NAME)
 						{
 							UnityEngine.Debug.Log($"[SnipeUpdater] found package: {item.name} {item.version} {item.packageId}");
 
@@ -170,11 +188,11 @@ public class SnipeUpdater : EditorWindow
 							if (index > 0)
 							{
 								string package_version = item.packageId.Substring(index + ".git#".Length);
-								mCurrentVersionIndex = mSelectedVersionIndex = Array.IndexOf(mPackageVersions, package_version);
+								mCurrentSnipePackageVersionIndex = mSelectedSnipePackageVersionIndex = Array.IndexOf(mSnipePackageVersions, package_version);
 							}
 							else
 							{
-								mCurrentVersionIndex = mSelectedVersionIndex = Array.IndexOf(mPackageVersions, item.version);
+								mCurrentSnipePackageVersionIndex = mSelectedSnipePackageVersionIndex = Array.IndexOf(mSnipePackageVersions, item.version);
 							}
 							break;
 						}
