@@ -54,7 +54,7 @@ public class SnipeUpdater : EditorWindow
 		{
 			EditorGUILayout.LabelField("Fetching... please wait...");
 		}
-		if (mPackageAddRequest != null)
+		else if (mPackageAddRequest != null)
 		{
 			EditorGUILayout.LabelField("Installing... please wait...");
 		}
