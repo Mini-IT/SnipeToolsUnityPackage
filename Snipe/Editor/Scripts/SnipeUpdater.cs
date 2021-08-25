@@ -27,7 +27,7 @@ public class SnipeUpdater : EditorWindow
 	private static GitHubTagsListWrapper mTags;
 
 	private static string[] mPackageVersions;
-	private static int mCurrentVersionIndex;
+	private static int mCurrentVersionIndex = -1;
 	private static int mSelectedVersionIndex;
 
 	[MenuItem("Snipe/Updater")]
@@ -35,7 +35,7 @@ public class SnipeUpdater : EditorWindow
 	{
 		EditorWindow.GetWindow(typeof(SnipeUpdater));
 	}
-
+	
 	private void OnEnable()
 	{
 		if (mBranches == null || mTags == null)
@@ -61,23 +61,26 @@ public class SnipeUpdater : EditorWindow
 				FetchBranchesList();
 			}
 
-			EditorGUILayout.LabelField($"Current version (detected): {(mCurrentVersionIndex >= 0 ? mPackageVersions[mCurrentVersionIndex] : "unknown")}");
-
-			GUILayout.BeginHorizontal();
-			EditorGUILayout.LabelField("Version: ");
-			mSelectedVersionIndex = EditorGUILayout.Popup(mSelectedVersionIndex, mPackageVersions);
-			
-			GUILayout.FlexibleSpace();
-			if (mSelectedVersionIndex >= 0 && GUILayout.Button("SWITCH"))
+			if (mPackageVersions != null)
 			{
-				string selected_vesion = mPackageVersions[mSelectedVersionIndex];
-				string version_suffix = (selected_vesion == "master") ? "" : $"#{selected_vesion}";
+				EditorGUILayout.LabelField($"Current version (detected): {(mCurrentVersionIndex >= 0 ? mPackageVersions[mCurrentVersionIndex] : "unknown")}");
+				
+				GUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField("Version: ");
+				mSelectedVersionIndex = EditorGUILayout.Popup(mSelectedVersionIndex, mPackageVersions);
+				
+				GUILayout.FlexibleSpace();
+				if (mSelectedVersionIndex >= 0 && GUILayout.Button("SWITCH"))
+				{
+					string selected_vesion = mPackageVersions[mSelectedVersionIndex];
+					string version_suffix = (selected_vesion == "master") ? "" : $"#{selected_vesion}";
 
-				mPackageAddRequest = Client.Add($"{PACKAGE_BASE_URL}{version_suffix}");
-				EditorApplication.update -= OnEditorUpdate;
-				EditorApplication.update += OnEditorUpdate;
+					mPackageAddRequest = Client.Add($"{PACKAGE_BASE_URL}{version_suffix}");
+					EditorApplication.update -= OnEditorUpdate;
+					EditorApplication.update += OnEditorUpdate;
+				}
+				GUILayout.EndHorizontal();
 			}
-			GUILayout.EndHorizontal();
 		}
 	}
 
