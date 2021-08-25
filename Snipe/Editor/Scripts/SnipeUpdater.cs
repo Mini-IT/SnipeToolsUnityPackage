@@ -81,7 +81,8 @@ public class SnipeUpdater : EditorWindow
 
 			if (mSnipePackageVersions != null)
 			{
-				EditorGUILayout.LabelField($"Current version (detected): {(mCurrentSnipePackageVersionIndex >= 0 ? mSnipePackageVersions[mCurrentSnipePackageVersionIndex] : "unknown")}");
+				string current_version_name = mCurrentSnipePackageVersionIndex >= 0 ? mSnipePackageVersions[mCurrentSnipePackageVersionIndex] : "unknown";
+				EditorGUILayout.LabelField($"Current version (detected): {current_version_name}");
 				
 				GUILayout.BeginHorizontal();
 				EditorGUILayout.LabelField("Version: ");
