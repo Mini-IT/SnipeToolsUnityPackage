@@ -67,9 +67,9 @@ public class SnipeTablesPreloadHelper
 				
 				// UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] {content}");
 				
-				var list_wrapper = new ResponseListWrapper();
+				var list_wrapper = new TablesListResponseListWrapper();
 				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
-				if (list_wrapper.data is List<ResponseListItem> list)
+				if (list_wrapper.data is List<TablesListResponseListItem> list)
 				{
 					foreach (var item in list)
 					{
@@ -92,9 +92,9 @@ public class SnipeTablesPreloadHelper
 				var response = await client.GetAsync($"https://edit.snipe.dev/api/v1/project/{project_id}/tableTypes");
 				var content = await response.Content.ReadAsStringAsync();
 				
-				var list_wrapper = new ResponseListWrapper();
+				var list_wrapper = new TablesListResponseListWrapper();
 				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
-				if (list_wrapper.data is List<ResponseListItem> list)
+				if (list_wrapper.data is List<TablesListResponseListItem> list)
 				{
 					var file_path = GetTableListFilePath();
 					UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] {file_path}");
@@ -150,13 +150,13 @@ internal class SnipeAuthLoginResponseData
 }
 
 [System.Serializable]
-internal class ResponseListWrapper
+internal class TablesListResponseListWrapper
 {
-	public List<ResponseListItem> data;
+	public List<TablesListResponseListItem> data;
 }
 
 [System.Serializable]
-internal class ResponseListItem
+internal class TablesListResponseListItem
 {
 	public int id;
 	public string stringID;

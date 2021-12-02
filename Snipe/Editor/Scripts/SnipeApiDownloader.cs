@@ -1,6 +1,7 @@
 ﻿#if UNITY_EDITOR
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -26,6 +27,8 @@ public class SnipeApiDownloader : EditorWindow
 	private static string mPrefsPrefix;
 
 	private string mToken;
+	private string[] mProjectsList;
+	private int mSelectedProjectIndex;
 
 	public static string RefreshPrefsPrefix()
 	{
@@ -76,7 +79,39 @@ public class SnipeApiDownloader : EditorWindow
 	{
 		EditorGUIUtility.labelWidth = 100;
 		
-		mProjectId = EditorGUILayout.TextField("Project ID", mProjectId);
+		mLogin = EditorGUILayout.TextField("Login", mLogin);
+		mPassword = EditorGUILayout.PasswordField("Password", mPassword);
+
+		EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(mLogin) || string.IsNullOrEmpty(mPassword));
+		
+		//mProjectId = EditorGUILayout.TextField("Project ID", mProjectId);
+		
+		GUILayout.BeginHorizontal();
+		
+		EditorGUILayout.LabelField($"Project: [{mProjectId}]");
+		
+		if (mProjectsList != null)
+		{
+			int selected_index = EditorGUILayout.Popup(mSelectedProjectIndex, mProjectsList);
+			
+			GUILayout.FlexibleSpace();
+			if (selected_index != mSelectedProjectIndex)
+			{
+				mSelectedProjectIndex = selected_index;
+				string selected_item = mProjectsList[mSelectedProjectIndex];
+				if (int.TryParse(selected_item.Substring(0, selected_item.IndexOf("-")).Trim(), out int project_id))
+				{
+					mProjectId = project_id.ToString();
+				}
+			}
+		}
+		
+		if (GUILayout.Button("Fetch Projects List"))
+		{
+			FetchProjectsList();
+		}
+		
+		GUILayout.EndHorizontal();
 
 		GUILayout.BeginHorizontal();
 		mDirectoryPath = EditorGUILayout.TextField("Directory", mDirectoryPath);
@@ -89,11 +124,6 @@ public class SnipeApiDownloader : EditorWindow
 			}
 		}
 		GUILayout.EndHorizontal();
-
-		mLogin = EditorGUILayout.TextField("Login", mLogin);
-		mPassword = EditorGUILayout.PasswordField("Password", mPassword);
-
-		EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(mLogin) || string.IsNullOrEmpty(mPassword));
 
 		mGetTablesList = EditorGUILayout.Toggle("Get tables list", mGetTablesList);
 
@@ -113,6 +143,39 @@ public class SnipeApiDownloader : EditorWindow
 		}
 		EditorGUILayout.EndHorizontal();
 		EditorGUI.EndDisabledGroup();
+	}
+	
+	private async Task FetchProjectsList()
+	{
+		mToken = await RequestAuthToken();
+		if (string.IsNullOrEmpty(mToken))
+		{
+			UnityEngine.Debug.Log("DownloadSnipeApi - FAILED to get token");
+			return;
+		}
+		
+		using (var loader = new HttpClient())
+		{
+			loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", mToken);
+			var response = await loader.GetAsync($"https://edit.snipe.dev/api/v1/projects");
+			var content = await response.Content.ReadAsStringAsync();
+			
+			var list_wrapper = new ProjectsListResponseListWrapper();
+			UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
+			if (list_wrapper.data is List<ProjectsListResponseListItem> list)
+			{
+				list.Sort((a, b) => { return a.id - b.id; });
+				
+				mProjectsList = new string[list.Count];
+				for (int i = 0; i < list.Count; i++)
+				{
+					var item = list[i];
+					mProjectsList[i] = $"{item.id} - {item.stringID} - {item.name} - {(item.isDev ? "DEV" : "LIVE")}";
+					if (item.id.ToString() == mProjectId)
+						mSelectedProjectIndex = i;
+				}
+			}
+		}
 	}
 
 	private async void DownloadSnipeApiAndClose()
@@ -138,10 +201,10 @@ public class SnipeApiDownloader : EditorWindow
 			return;
 		}
 		
-		using (var api_client = new HttpClient())
+		using (var loader = new HttpClient())
 		{
-			api_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", mToken);
-			var response = await api_client.GetAsync($"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{mSnipeVersionSuffix}");
+			loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", mToken);
+			var response = await loader.GetAsync($"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{mSnipeVersionSuffix}");
 			
 			using (StreamWriter sw = File.CreateText(Path.Combine(mDirectoryPath, "SnipeApi.cs")))
 			{
@@ -179,13 +242,23 @@ public class SnipeApiDownloader : EditorWindow
 	}
 }
 
-internal class LoginResponseData
+#pragma warning disable 0649
+
+[System.Serializable]
+internal class ProjectsListResponseListWrapper
 {
-	#pragma warning disable 0649
-	// public string errorCode;
-	public string token;
-	
-	#pragma warning restore 0649
+	public List<ProjectsListResponseListItem> data;
 }
+
+[System.Serializable]
+internal class ProjectsListResponseListItem
+{
+	public int id;
+	public string stringID;
+	public string name;
+	public bool isDev;
+}
+
+#pragma warning restore 0649
 
 #endif // UNITY_EDITOR
