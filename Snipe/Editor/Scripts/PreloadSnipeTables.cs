@@ -101,7 +101,7 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 		
 		Task.Run(async () => { await LoadVersion(); }).Wait(10000);
 		
-		if (!string.IsNullOrEmpty(mVersion))
+		if (!string.IsNullOrWhiteSpace(mVersion))
 		{
 			foreach (string tablename in mTableNames)
 			{
@@ -134,12 +134,21 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 				return;
 			}
 			
-			using (var reader = new StreamReader(await loader_task.Result.Content.ReadAsStreamAsync()))
+			HttpResponseMessage response = loader_task.Result;
+			if (!response.IsSuccessStatusCode)
+			{
+				Debug.Log($"[PreloadSnipeTables] LoadVersion - Failed - http error: {response.StatusCode}");
+				return;
+			}
+			
+			using (var reader = new StreamReader(await response.Content.ReadAsStreamAsync()))
 			{
 				mVersion = reader.ReadLine().Trim();
 			}
 			
-			if (!string.IsNullOrEmpty(mVersion))
+			Debug.Log($"[PreloadSnipeTables] Version = {mVersion}");
+			
+			if (!string.IsNullOrWhiteSpace(mVersion))
 			{
 				// save to file
 				File.WriteAllText(GetTablesVersionFilePath(), mVersion);
@@ -147,6 +156,7 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 		}
 		catch (Exception)
 		{
+			mVersion = "";
 			Debug.Log("[PreloadSnipeTables] LoadVersion - Failed to read tables version");
 		}
 	}
@@ -178,7 +188,14 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 				return;
 			}
 			
-			using (var file_content_stream = await loader_task.Result.Content.ReadAsStreamAsync())
+			HttpResponseMessage response = loader_task.Result;
+			if (!response.IsSuccessStatusCode)
+			{
+				Debug.Log($"[PreloadSnipeTables] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
+				return;
+			}
+			
+			using (var file_content_stream = await response.Content.ReadAsStreamAsync())
 			{
 				using (FileStream cache_write_stream = new FileStream(cache_path, FileMode.Create, FileAccess.Write))
 				{
