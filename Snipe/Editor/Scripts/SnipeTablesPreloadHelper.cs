@@ -108,15 +108,26 @@ public class SnipeTablesPreloadHelper
 					//if (list.Count > 0)
 					{
 						using (StreamWriter sw = File.CreateText(file_path))
-						{					
+						{
+							var tables = new List<string>(list.Count + 3);
+							
 							foreach (var item in list)
 							{
 								string table_name = item.stringID;
 								if (!string.IsNullOrEmpty(table_name))
 								{
 									sw.WriteLine(table_name);
+									tables.Add(table_name);
 								}
 							}
+							
+							// common tables for all projects
+							if (!tables.Contains("Items"))
+								sw.WriteLine("Items");
+							if (!tables.Contains("Logic"))
+								sw.WriteLine("Logic");
+							if (!tables.Contains("Calendar"))
+								sw.WriteLine("Calendar");
 							
 							if (!string.IsNullOrEmpty(project_string_id))
 							{
