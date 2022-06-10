@@ -13,6 +13,9 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
+namespace MiniIT.Snipe.Editor
+{
+
 public class SnipeTablesPreloadHelper
 {
 	private static string mPrefsPrefix;
@@ -174,3 +177,5 @@ internal class TablesListResponseListItem
 }
 
 #pragma warning restore 0649
+
+}

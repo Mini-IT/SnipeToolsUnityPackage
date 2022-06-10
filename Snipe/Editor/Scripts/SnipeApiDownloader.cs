@@ -13,6 +13,9 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEditor;
 
+namespace MiniIT.Snipe.Editor
+{
+
 public class SnipeApiDownloader : EditorWindow
 {
 	private static readonly string[] SNIPE_VERSIONS = new string[] { "V5", "V6" };
@@ -108,7 +111,7 @@ public class SnipeApiDownloader : EditorWindow
 		
 		if (GUILayout.Button("Fetch Projects List"))
 		{
-			FetchProjectsList();
+			_ = FetchProjectsList();
 		}
 		
 		GUILayout.EndHorizontal();
@@ -260,5 +263,7 @@ internal class ProjectsListResponseListItem
 }
 
 #pragma warning restore 0649
+
+}
 
 #endif // UNITY_EDITOR
