@@ -151,7 +151,7 @@ public class SnipeUpdater : EditorWindow
 		EditorApplication.update -= OnEditorUpdate;
 		EditorApplication.update += OnEditorUpdate;
 		
-		while (mPackageAddRequest != null)
+		while (mPackageListRequest != null)
 		{
 			await Task.Delay(10);
 		}

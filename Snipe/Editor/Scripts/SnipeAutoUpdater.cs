@@ -6,30 +6,31 @@ using UnityEngine.SceneManagement;
 
 namespace MiniIT.Snipe.Editor
 {
-
 	[InitializeOnLoad]
 	public static class SnipeAutoUpdater
 	{
 		private const string PREF_AUTO_UPDATE_ENABLED = "Snipe.AutoUpdateEnabled";
+		private const string PREF_LAST_UPDATE_CHECK_ID = "Snipe.LastUpdateCheckId";
+		
 		private const string MENU_AUTO_UPDATE_ENABLED = "Snipe/Enable auto updates";
 		
 		private static bool mProcessing = false;
 
-		static bool autoUpdateEnabled
+		static bool AutoUpdateEnabled
 		{
-			get { return EditorPrefs.HasKey(PREF_AUTO_UPDATE_ENABLED) && EditorPrefs.GetBool(PREF_AUTO_UPDATE_ENABLED); }
-			set { EditorPrefs.SetBool(PREF_AUTO_UPDATE_ENABLED, value); }
+			get => EditorPrefs.HasKey(PREF_AUTO_UPDATE_ENABLED) && EditorPrefs.GetBool(PREF_AUTO_UPDATE_ENABLED);
+			set => EditorPrefs.SetBool(PREF_AUTO_UPDATE_ENABLED, value);
 		}
 
 		[MenuItem(MENU_AUTO_UPDATE_ENABLED, false)]
 		static void SnipeAutoUpdaterCheckMenu()
 		{
-			autoUpdateEnabled = !autoUpdateEnabled;
-			Menu.SetChecked(MENU_AUTO_UPDATE_ENABLED, autoUpdateEnabled);
+			AutoUpdateEnabled = !AutoUpdateEnabled;
+			Menu.SetChecked(MENU_AUTO_UPDATE_ENABLED, AutoUpdateEnabled);
 
-			ShowNotificationOrLog(autoUpdateEnabled ? "Snipe auto update enabled" : "Snipe auto update disabled");
+			ShowNotificationOrLog(AutoUpdateEnabled ? "Snipe auto update enabled" : "Snipe auto update disabled");
 			
-			if (autoUpdateEnabled)
+			if (AutoUpdateEnabled)
 			{
 				CheckUpdateAvailable();
 			}
@@ -39,13 +40,13 @@ namespace MiniIT.Snipe.Editor
 		[MenuItem(MENU_AUTO_UPDATE_ENABLED, true)]
 		static bool SnipeAutoUpdaterCheckMenuValidate()
 		{
-			Menu.SetChecked(MENU_AUTO_UPDATE_ENABLED, autoUpdateEnabled);
+			Menu.SetChecked(MENU_AUTO_UPDATE_ENABLED, AutoUpdateEnabled);
 			return true;
 		}
 		
 		static SnipeAutoUpdater()
 		{
-			if (autoUpdateEnabled)
+			if (AutoUpdateEnabled && EditorPrefs.GetInt(PREF_LAST_UPDATE_CHECK_ID, 0) != (int)EditorAnalyticsSessionInfo.id)
 			{
 				CheckUpdateAvailable();
 			}
@@ -70,7 +71,6 @@ namespace MiniIT.Snipe.Editor
 			await SnipeUpdater.FetchVersionsList();
 			
 			if (SnipeUpdater.SnipePackageVersions != null && SnipeUpdater.SnipePackageVersions.Length > 0)
-				// && SnipeUpdater.CurrentSnipePackageVersionIndex >= 0)
 			{
 				string current_version_code = SnipeUpdater.CurrentSnipePackageVersionIndex >= 0 ?
 					SnipeUpdater.SnipePackageVersions[SnipeUpdater.CurrentSnipePackageVersionIndex] :
@@ -98,17 +98,19 @@ namespace MiniIT.Snipe.Editor
 					
 					if (!string.IsNullOrEmpty(newer_version_code))
 					{
-						Debug.Log($"[SnipeAutoUpdater] Newer version detected: {newer_version_code}");
+						Debug.Log($"[SnipeAutoUpdater] A newer version found: {newer_version_code}");
 						
 						if (EditorUtility.DisplayDialog("SnipeAutoUpdater",
 							$"Newer version detected: {newer_version_code}\n(Installed version is {current_version_code})",
 							"Update now", "Dismiss"))
 						{
 							SnipeUpdater.ShowWindow();
-						}		
+						}
 					}
 				}
 			}
+			
+			EditorPrefs.SetInt(PREF_LAST_UPDATE_CHECK_ID, (int)EditorAnalyticsSessionInfo.id);
 			
 			mProcessing = false;
 		}
