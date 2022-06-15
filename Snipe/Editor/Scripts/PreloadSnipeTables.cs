@@ -130,14 +130,14 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 
 			if (loader_task.IsFaulted || loader_task.IsCanceled)
 			{
-				Debug.Log("[PreloadSnipeTables] LoadVersion - Failed to load tables version - (loader failed)");
+				Debug.LogError("[PreloadSnipeTables] LoadVersion - Failed to load tables version - (loader failed)");
 				return;
 			}
 			
 			HttpResponseMessage response = loader_task.Result;
 			if (!response.IsSuccessStatusCode)
 			{
-				Debug.Log($"[PreloadSnipeTables] LoadVersion - Failed - http error: {response.StatusCode}");
+				Debug.LogError($"[PreloadSnipeTables] LoadVersion - Failed - http error: {response.StatusCode}");
 				return;
 			}
 			
@@ -157,7 +157,7 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 		catch (Exception)
 		{
 			mVersion = "";
-			Debug.Log("[PreloadSnipeTables] LoadVersion - Failed to read tables version");
+			Debug.LogError("[PreloadSnipeTables] LoadVersion - Failed to read tables version");
 		}
 	}
 	
@@ -184,14 +184,14 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 			
 			if (loader_task.IsFaulted || loader_task.IsCanceled || !loader_task.Result.IsSuccessStatusCode)
 			{
-				Debug.Log($"[PreloadSnipeTables] Failed to load table - {table_name}   (loader failed)");
+				Debug.LogError($"[PreloadSnipeTables] Failed to load table - {table_name}   (loader failed)");
 				return;
 			}
 			
 			HttpResponseMessage response = loader_task.Result;
 			if (!response.IsSuccessStatusCode)
 			{
-				Debug.Log($"[PreloadSnipeTables] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
+				Debug.LogError($"[PreloadSnipeTables] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
 				return;
 			}
 			
@@ -206,14 +206,14 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 					}
 					catch (Exception ex)
 					{
-						Debug.Log("[PreloadSnipeTables] Failed to save - " + table_name + " - " + ex.Message);
+						Debug.LogError("[PreloadSnipeTables] Failed to save - " + table_name + " - " + ex.Message);
 					}
 				}
 			}
 		}
 		catch (Exception)
 		{
-			Debug.Log("[PreloadSnipeTables] Failed to load table - " + table_name);
+			Debug.LogError("[PreloadSnipeTables] Failed to load table - " + table_name);
 		}
 	}
 	
