@@ -58,11 +58,12 @@ namespace MiniIT.Snipe.Editor
 		protected void OnEnable()
 		{
 			RefreshPrefsPrefix();
-
+			
+			mLogin = GetLogin();
+			mPassword = GetPassword();
+			
 			mProjectId = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
 			mDirectoryPath = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
-			mLogin = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.login", mLogin);
-			mPassword = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.password", mPassword);
 			mSnipeVersionSuffix = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 
 			if (string.IsNullOrEmpty(mDirectoryPath))
@@ -71,19 +72,47 @@ namespace MiniIT.Snipe.Editor
 
 		protected void OnDisable()
 		{
+			SaveLogin(mLogin);
+			SavePassword(mPassword);
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
-			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.login", mLogin);
-			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.password", mPassword);
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
+		}
+		
+		private static string GetLogin()
+		{
+			return EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.login");
+		}
+		private static void SaveLogin(string value)
+		{
+			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.login", value);
+		}
+		
+		private static string GetPassword()
+		{
+			return EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.password");
+		}
+		private static void SavePassword(string value)
+		{
+			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.password", value);
 		}
 
 		void OnGUI()
 		{
 			EditorGUIUtility.labelWidth = 100;
 
-			mLogin = EditorGUILayout.TextField("Login", mLogin);
-			mPassword = EditorGUILayout.PasswordField("Password", mPassword);
+			string login = EditorGUILayout.TextField("Login", mLogin);
+			if (login != mLogin)
+			{
+				mLogin = login;
+				SaveLogin(mLogin);
+			}
+			string password = EditorGUILayout.PasswordField("Password", mPassword);
+			if (password != mPassword)
+			{
+				mPassword = password;
+				SavePassword(mPassword);
+			}
 
 			EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(mLogin) || string.IsNullOrEmpty(mPassword));
 
@@ -164,7 +193,7 @@ namespace MiniIT.Snipe.Editor
 				
 				if (!response.IsSuccessStatusCode)
 				{
-					UnityEngine.Debug.LogError($"DownloadSnipeApi - failed; HTTP status: {response.StatusCode}");
+					UnityEngine.Debug.LogError($"DownloadSnipeApi - failed; HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
 					return;
 				}
 
@@ -218,7 +247,7 @@ namespace MiniIT.Snipe.Editor
 
 				if (!response.IsSuccessStatusCode)
 				{
-					UnityEngine.Debug.LogError($"DownloadSnipeApi - FAILED to get token; HTTP status: {response.StatusCode}");
+					UnityEngine.Debug.LogError($"DownloadSnipeApi - FAILED to get token; HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
 					return;
 				}
 
@@ -234,8 +263,14 @@ namespace MiniIT.Snipe.Editor
 		public static async Task<string> RequestAuthToken()
 		{
 			RefreshPrefsPrefix();
-			string login = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.login");
-			string password = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.password");
+			string login = GetLogin();
+			string password = GetPassword();
+			
+			if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(password))
+			{
+				UnityEngine.Debug.LogError($"[SnipeTablesPreloadHelper] Failed to auth. Invalid login or password");
+				return null;
+			}
 
 			var loader = new HttpClient();
 			var request_data = new StringContent($"{{\"login\":\"{login}\",\"password\":\"{password}\"}}", Encoding.UTF8, "application/json");
@@ -244,7 +279,13 @@ namespace MiniIT.Snipe.Editor
 
 			if (loader_task.IsFaulted || loader_task.IsCanceled)
 			{
-				UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] Failed to auth");
+				UnityEngine.Debug.LogError($"[SnipeTablesPreloadHelper] Failed to auth. Task is faulted");
+				return null;
+			}
+			
+			if (!loader_response.IsSuccessStatusCode)
+			{
+				UnityEngine.Debug.LogError($"DownloadSnipeApi - FAILED to auth; HTTP status: {(int)loader_response.StatusCode} - {loader_response.StatusCode}");
 				return null;
 			}
 
