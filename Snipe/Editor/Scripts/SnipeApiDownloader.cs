@@ -31,7 +31,7 @@ namespace MiniIT.Snipe.Editor
 
 		private string mToken;
 		private string[] mProjectsList;
-		private int mSelectedProjectIndex;
+		private int mSelectedProjectIndex = -1;
 
 		public static string RefreshPrefsPrefix()
 		{
@@ -124,7 +124,7 @@ namespace MiniIT.Snipe.Editor
 
 			if (mProjectsList != null)
 			{
-				int selected_index = EditorGUILayout.Popup(mSelectedProjectIndex, mProjectsList);
+				int selected_index = EditorGUILayout.Popup(Mathf.Max(0, mSelectedProjectIndex), mProjectsList);
 
 				GUILayout.FlexibleSpace();
 				if (selected_index != mSelectedProjectIndex)
