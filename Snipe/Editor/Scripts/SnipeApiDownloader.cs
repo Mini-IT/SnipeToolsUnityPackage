@@ -20,7 +20,7 @@ namespace MiniIT.Snipe.Editor
 	{
 		private static readonly string[] SNIPE_VERSIONS = new string[] { "V5", "V6" };
 
-		private string mProjectId = "1";
+		private string mProjectId = "0";
 		private string mDirectoryPath;
 		private string mLogin;
 		private string mPassword;
@@ -32,6 +32,8 @@ namespace MiniIT.Snipe.Editor
 		private string mToken;
 		private string[] mProjectsList;
 		private int mSelectedProjectIndex = -1;
+		
+		private SnipeAuthKey mAuthKey;
 
 		public static string RefreshPrefsPrefix()
 		{
@@ -58,6 +60,8 @@ namespace MiniIT.Snipe.Editor
 		protected void OnEnable()
 		{
 			RefreshPrefsPrefix();
+			
+			LoadApiKey();
 			
 			mLogin = GetLogin();
 			mPassword = GetPassword();
@@ -96,54 +100,83 @@ namespace MiniIT.Snipe.Editor
 		{
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.password", value);
 		}
-
-		void OnGUI()
+		
+		private void LoadApiKey()
 		{
-			EditorGUIUtility.labelWidth = 100;
-
-			string login = EditorGUILayout.TextField("Login", mLogin);
-			if (login != mLogin)
+			if (mAuthKey == null)
+				mAuthKey = new SnipeAuthKey();
+			mAuthKey.project = 0;
+			
+			string path = Path.Combine(Application.dataPath, "..", "snipe_api_key.json");
+			if (File.Exists(path))
 			{
-				mLogin = login;
-				SaveLogin(mLogin);
-			}
-			string password = EditorGUILayout.PasswordField("Password", mPassword);
-			if (password != mPassword)
-			{
-				mPassword = password;
-				SavePassword(mPassword);
-			}
-
-			EditorGUI.BeginDisabledGroup(string.IsNullOrEmpty(mLogin) || string.IsNullOrEmpty(mPassword));
-
-			//mProjectId = EditorGUILayout.TextField("Project ID", mProjectId);
-
-			GUILayout.BeginHorizontal();
-
-			EditorGUILayout.LabelField($"Project: [{mProjectId}]");
-
-			if (mProjectsList != null)
-			{
-				int selected_index = EditorGUILayout.Popup(Mathf.Max(0, mSelectedProjectIndex), mProjectsList);
-
-				GUILayout.FlexibleSpace();
-				if (selected_index != mSelectedProjectIndex)
+				string json = File.ReadAllText(path);
+				UnityEditor.EditorJsonUtility.FromJsonOverwrite(json, mAuthKey);
+				
+				if (mAuthKey.IsValid)
 				{
-					mSelectedProjectIndex = selected_index;
-					string selected_item = mProjectsList[mSelectedProjectIndex];
-					if (int.TryParse(selected_item.Substring(0, selected_item.IndexOf("-")).Trim(), out int project_id))
-					{
-						mProjectId = project_id.ToString();
-					}
+					mProjectId = mAuthKey.project.ToString();
 				}
 			}
+		}
 
-			if (GUILayout.Button("Fetch Projects List"))
+		private void OnGUI()
+		{
+			EditorGUIUtility.labelWidth = 100;
+			
+			if (mAuthKey == null || !mAuthKey.IsValid)
 			{
-				_ = FetchProjectsList();
+				string login = EditorGUILayout.TextField("Login", mLogin);
+				if (login != mLogin)
+				{
+					mLogin = login;
+					SaveLogin(mLogin);
+				}
+				string password = EditorGUILayout.PasswordField("Password", mPassword);
+				if (password != mPassword)
+				{
+					mPassword = password;
+					SavePassword(mPassword);
+				}
 			}
+			
+			bool auth_valid = (mAuthKey != null && mAuthKey.IsValid) || (!string.IsNullOrEmpty(mLogin) && !string.IsNullOrEmpty(mPassword));
 
-			GUILayout.EndHorizontal();
+			EditorGUI.BeginDisabledGroup(!auth_valid);
+
+			if (mAuthKey == null || !mAuthKey.IsValid)
+			{
+				GUILayout.BeginHorizontal();
+
+				EditorGUILayout.LabelField($"Project: [{mProjectId}]");
+
+				if (mProjectsList != null)
+				{
+					int selected_index = EditorGUILayout.Popup(Mathf.Max(0, mSelectedProjectIndex), mProjectsList);
+
+					GUILayout.FlexibleSpace();
+					if (selected_index != mSelectedProjectIndex)
+					{
+						mSelectedProjectIndex = selected_index;
+						string selected_item = mProjectsList[mSelectedProjectIndex];
+						if (int.TryParse(selected_item.Substring(0, selected_item.IndexOf("-")).Trim(), out int project_id))
+						{
+							mProjectId = project_id.ToString();
+						}
+					}
+				}
+
+				if (GUILayout.Button("Fetch Projects List"))
+				{
+					_ = FetchProjectsList();
+				}
+
+				GUILayout.EndHorizontal();
+			}
+			else
+			{
+				EditorGUILayout.LabelField($"Project: [{mProjectId}] - extracted from api key file");
+			}
 
 			GUILayout.BeginHorizontal();
 			mDirectoryPath = EditorGUILayout.TextField("Directory", mDirectoryPath);
@@ -179,7 +212,11 @@ namespace MiniIT.Snipe.Editor
 
 		private async Task FetchProjectsList()
 		{
-			mToken = await RequestAuthToken();
+			if (mAuthKey != null && mAuthKey.IsValid)
+				mToken = mAuthKey.key;
+			else
+				mToken = await RequestAuthToken();
+			
 			if (string.IsNullOrEmpty(mToken))
 			{
 				UnityEngine.Debug.Log("DownloadSnipeApi - FAILED to get token");
@@ -232,8 +269,12 @@ namespace MiniIT.Snipe.Editor
 		public async Task DownloadSnipeApi()
 		{
 			UnityEngine.Debug.Log("DownloadSnipeApi - start");
-
-			mToken = await RequestAuthToken();
+			
+			if (mAuthKey != null && mAuthKey.IsValid)
+				mToken = mAuthKey.key;
+			else
+				mToken = await RequestAuthToken();
+			
 			if (string.IsNullOrEmpty(mToken))
 			{
 				UnityEngine.Debug.LogError("DownloadSnipeApi - FAILED to get token");
@@ -243,7 +284,8 @@ namespace MiniIT.Snipe.Editor
 			using (var loader = new HttpClient())
 			{
 				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", mToken);
-				var response = await loader.GetAsync($"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{mSnipeVersionSuffix}");
+				string url = $"https://edit.snipe.dev/api/v1/project/{mProjectId}/code/unityBindings{mSnipeVersionSuffix}";
+				var response = await loader.GetAsync(url);
 
 				if (!response.IsSuccessStatusCode)
 				{
@@ -314,6 +356,15 @@ namespace MiniIT.Snipe.Editor
 		public string stringID;
 		public string name;
 		public bool isDev;
+	}
+	
+	[System.Serializable]
+	internal class SnipeAuthKey
+	{
+		public int project;
+		public string key;
+		
+		public bool IsValid => project > 0 && !string.IsNullOrEmpty(key);
 	}
 
 #pragma warning restore 0649
