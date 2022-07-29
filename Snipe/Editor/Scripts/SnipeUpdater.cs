@@ -37,7 +37,7 @@ public class SnipeUpdater : EditorWindow
 	public static int CurrentSnipePackageVersionIndex { get; private set; } = -1;
 	private static int mSelectedSnipePackageVersionIndex;
 
-	[MenuItem("Snipe/Updater")]
+	[MenuItem("Snipe/Updater...")]
 	public static void ShowWindow()
 	{
 		EditorWindow.GetWindow(typeof(SnipeUpdater));

@@ -51,7 +51,7 @@ namespace MiniIT.Snipe.Editor
 			return mPrefsPrefix;
 		}
 
-		[MenuItem("Snipe/Download SnipeApi")]
+		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
 		{
 			EditorWindow.GetWindow(typeof(SnipeApiDownloader));
@@ -72,6 +72,9 @@ namespace MiniIT.Snipe.Editor
 
 			if (string.IsNullOrEmpty(mDirectoryPath))
 				mDirectoryPath = Application.dataPath;
+			
+			if (SnipeAutoUpdater.AutoUpdateEnabled)
+				SnipeAutoUpdater.CheckUpdateAvailable();
 		}
 
 		protected void OnDisable()

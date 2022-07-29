@@ -12,13 +12,13 @@ namespace MiniIT.Snipe.Editor
 		private const string PREF_AUTO_UPDATE_ENABLED = "Snipe.AutoUpdateEnabled";
 		private const string PREF_LAST_UPDATE_CHECK_ID = "Snipe.LastUpdateCheckId";
 		
-		private const string MENU_AUTO_UPDATE_ENABLED = "Snipe/Enable auto updates";
+		private const string MENU_AUTO_UPDATE_ENABLED = "Snipe/Check for updates automatically";
 		
 		private static bool mProcessing = false;
 
-		static bool AutoUpdateEnabled
+		public static bool AutoUpdateEnabled
 		{
-			get => EditorPrefs.HasKey(PREF_AUTO_UPDATE_ENABLED) && EditorPrefs.GetBool(PREF_AUTO_UPDATE_ENABLED);
+			get => EditorPrefs.GetBool(PREF_AUTO_UPDATE_ENABLED, true);
 			set => EditorPrefs.SetBool(PREF_AUTO_UPDATE_ENABLED, value);
 		}
 
@@ -60,7 +60,7 @@ namespace MiniIT.Snipe.Editor
 				Debug.Log($"[SnipeAutoUpdater] {msg}"); // When there's no scene view opened, we just print a log
 		}
 		
-		private static async void CheckUpdateAvailable()
+		public static async void CheckUpdateAvailable()
 		{
 			if (mProcessing)
 				return;
