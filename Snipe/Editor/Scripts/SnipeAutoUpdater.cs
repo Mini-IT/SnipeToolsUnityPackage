@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 
+using System;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,6 +12,7 @@ namespace MiniIT.Snipe.Editor
 	{
 		private const string PREF_AUTO_UPDATE_ENABLED = "Snipe.AutoUpdateEnabled";
 		private const string PREF_LAST_UPDATE_CHECK_ID = "Snipe.LastUpdateCheckId";
+		private const string PREF_LAST_UPDATE_CHECK_TS = "Snipe.LastUpdateCheckTS";
 		
 		private const string MENU_AUTO_UPDATE_ENABLED = "Snipe/Check for Updates Automatically";
 		
@@ -46,9 +48,26 @@ namespace MiniIT.Snipe.Editor
 		
 		static SnipeAutoUpdater()
 		{
-			if (AutoUpdateEnabled && EditorPrefs.GetInt(PREF_LAST_UPDATE_CHECK_ID, 0) != (int)EditorAnalyticsSessionInfo.id)
+			Run();
+		}
+		
+		//[MenuItem("Snipe/Run Autoupdater")]
+		public static void Run()
+		{
+			if (AutoUpdateEnabled)
 			{
-				CheckUpdateAvailable();
+				bool check_needed = EditorPrefs.GetInt(PREF_LAST_UPDATE_CHECK_ID, 0) != (int)EditorAnalyticsSessionInfo.id;
+				if (!check_needed)
+				{
+					var check_ts = EditorPrefs.GetInt(PREF_LAST_UPDATE_CHECK_TS, 0);
+					var passed = DateTime.UtcNow - DateTimeOffset.FromUnixTimeSeconds(check_ts).UtcDateTime;
+					check_needed = passed.TotalHours >= 12;
+				}
+				
+				if (check_needed)
+				{
+					CheckUpdateAvailable();
+				}
 			}
 		}
 
@@ -111,6 +130,7 @@ namespace MiniIT.Snipe.Editor
 			}
 			
 			EditorPrefs.SetInt(PREF_LAST_UPDATE_CHECK_ID, (int)EditorAnalyticsSessionInfo.id);
+			EditorPrefs.SetInt(PREF_LAST_UPDATE_CHECK_TS, (int)new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds());
 			
 			mProcessing = false;
 			
