@@ -12,7 +12,7 @@ namespace MiniIT.Snipe.Editor
 		private const string PREF_AUTO_UPDATE_ENABLED = "Snipe.AutoUpdateEnabled";
 		private const string PREF_LAST_UPDATE_CHECK_ID = "Snipe.LastUpdateCheckId";
 		
-		private const string MENU_AUTO_UPDATE_ENABLED = "Snipe/Check for updates automatically";
+		private const string MENU_AUTO_UPDATE_ENABLED = "Snipe/Check for Updates Automatically";
 		
 		private static bool mProcessing = false;
 
@@ -100,7 +100,7 @@ namespace MiniIT.Snipe.Editor
 					{
 						Debug.Log($"[SnipeAutoUpdater] A newer version found: {newer_version_code}");
 						
-						if (EditorUtility.DisplayDialog("SnipeAutoUpdater",
+						if (EditorUtility.DisplayDialog("Snipe Auto Updater",
 							$"Newer version detected: {newer_version_code}\n(Installed version is {current_version_code})",
 							"Update now", "Dismiss"))
 						{
@@ -113,9 +113,11 @@ namespace MiniIT.Snipe.Editor
 			EditorPrefs.SetInt(PREF_LAST_UPDATE_CHECK_ID, (int)EditorAnalyticsSessionInfo.id);
 			
 			mProcessing = false;
+			
+			SnipeToolsAutoUpdater.CheckUpdateAvailable();
 		}
 		
-		private static bool TryParseVersion(string version_string, out int[] version)
+		internal static bool TryParseVersion(string version_string, out int[] version)
 		{
 			string[] version_code = version_string.Split('.');
 			if (version_code != null && version_code.Length == 3)
@@ -141,7 +143,7 @@ namespace MiniIT.Snipe.Editor
 			return false;
 		}
 		
-		private static bool CheckVersionGreater(int[] current_version, int[] check_version)
+		internal static bool CheckVersionGreater(int[] current_version, int[] check_version)
 		{
 			if (check_version[0] < current_version[0])
 				return false;

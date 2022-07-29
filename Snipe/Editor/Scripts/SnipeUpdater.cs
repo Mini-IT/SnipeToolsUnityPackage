@@ -19,7 +19,7 @@ namespace MiniIT.Snipe.Editor
 
 public class SnipeUpdater : EditorWindow
 {
-	internal const string API_BASE_URL = "https://api.github.com/repos/Mini-IT/SnipeUnityPackage/";
+	internal const string GIT_API_BASE_URL = "https://api.github.com/repos/Mini-IT/SnipeUnityPackage/";
 	
 	internal const string SNIPE_PACKAGE_NAME = "com.miniit.snipe.client";
 	internal const string SNIPE_PACKAGE_BASE_URL = "https://github.com/Mini-IT/SnipeUnityPackage.git";
@@ -66,7 +66,7 @@ public class SnipeUpdater : EditorWindow
 			GUILayout.BeginHorizontal();
 			if (GUILayout.Button("Update Snipe Tools Package"))
 			{
-				var request = Client.Add($"{TOOLS_PACKAGE_BASE_URL}");
+				var request = InstallSnipeToolsPackage();
 				while (!request.IsCompleted)
 				{
 				}
@@ -105,6 +105,11 @@ public class SnipeUpdater : EditorWindow
 			}
 		}
 	}
+	
+	public static AddRequest InstallSnipeToolsPackage()
+	{
+		return Client.Add($"{TOOLS_PACKAGE_BASE_URL}");
+	}
 
 	public static async Task FetchVersionsList()
 	{
@@ -115,8 +120,8 @@ public class SnipeUpdater : EditorWindow
 		
 		// UnityEngine.Debug.Log($"[SnipeUpdater] Fetching brunches list");
 		
-		mBranches = await RequestList<GitHubBranchesListWrapper>("branches");
-		mTags = await RequestList<GitHubTagsListWrapper>("tags");
+		mBranches = await RequestList<GitHubBranchesListWrapper>(GIT_API_BASE_URL, "branches");
+		mTags = await RequestList<GitHubTagsListWrapper>(GIT_API_BASE_URL, "tags");
 
 		int items_count = (mBranches?.items?.Count ?? 0) + (mTags?.items?.Count ?? 0);
 		SnipePackageVersions = new string[items_count];
@@ -157,7 +162,7 @@ public class SnipeUpdater : EditorWindow
 		}
 	}
 	
-	private static async Task<WrapperType> RequestList<WrapperType>(string url_suffix) where WrapperType : new()
+	internal static async Task<WrapperType> RequestList<WrapperType>(string git_base_url, string url_suffix) where WrapperType : new()
 	{
 		UnityEngine.Debug.Log("[SnipeUpdater] RequestList - start - " + url_suffix);
 		
@@ -166,7 +171,7 @@ public class SnipeUpdater : EditorWindow
 		using (var web_client = new HttpClient())
 		{
 			web_client.DefaultRequestHeaders.UserAgent.ParseAdd("SnipeUpdater");
-			var response = await web_client.GetAsync($"{API_BASE_URL}{url_suffix}");
+			var response = await web_client.GetAsync($"{git_base_url}{url_suffix}");
 			var content = await response.Content.ReadAsStringAsync();
 			
 			// UnityEngine.Debug.Log($"[SnipeUpdater] {content}");
