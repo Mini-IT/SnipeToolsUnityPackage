@@ -123,7 +123,7 @@ namespace MiniIT.Snipe.Editor
 							$"Newer version detected: {newer_version_code}\n(Installed version is {current_version_code})",
 							"Update now", "Dismiss"))
 						{
-							SnipeUpdater.ShowWindow();
+							SnipeUpdater.InstallSnipePackage(newer_version_code);
 						}
 					}
 				}

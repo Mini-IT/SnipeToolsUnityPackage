@@ -94,16 +94,22 @@ public class SnipeUpdater : EditorWindow
 				GUILayout.FlexibleSpace();
 				if (mSelectedSnipePackageVersionIndex >= 0 && GUILayout.Button("Switch / Update"))
 				{
-					string selected_vesion = SnipePackageVersions[mSelectedSnipePackageVersionIndex];
-					string version_suffix = (selected_vesion == "master") ? "" : $"#{selected_vesion}";
+					string selected_version = SnipePackageVersions[mSelectedSnipePackageVersionIndex];
+					string version_id = (selected_version == "master") ? "" : $"{selected_version}";
 
-					mPackageAddRequest = Client.Add($"{SNIPE_PACKAGE_BASE_URL}{version_suffix}");
-					EditorApplication.update -= OnEditorUpdate;
-					EditorApplication.update += OnEditorUpdate;
+					InstallSnipePackage(version_id);
 				}
 				GUILayout.EndHorizontal();
 			}
 		}
+	}
+	
+	internal static void InstallSnipePackage(string version)
+	{
+		string version_suffix = string.IsNullOrEmpty(version) ? "" : $"#{version}";
+		mPackageAddRequest = Client.Add($"{SNIPE_PACKAGE_BASE_URL}{version_suffix}");
+		EditorApplication.update -= OnEditorUpdate;
+		EditorApplication.update += OnEditorUpdate;
 	}
 	
 	public static AddRequest InstallSnipeToolsPackage()
