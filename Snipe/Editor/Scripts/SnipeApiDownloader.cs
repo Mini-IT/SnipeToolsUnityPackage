@@ -33,7 +33,7 @@ namespace MiniIT.Snipe.Editor
 		private string[] mProjectsList;
 		private int mSelectedProjectIndex = -1;
 		
-		private SnipeAuthKey mAuthKey;
+		private string mAuthKey;
 
 		public static string RefreshPrefsPrefix()
 		{
@@ -54,14 +54,14 @@ namespace MiniIT.Snipe.Editor
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
 		{
-			EditorWindow.GetWindow(typeof(SnipeApiDownloader));
+			EditorWindow.GetWindow<SnipeApiDownloader>("SnipeApi");
 		}
 
 		protected void OnEnable()
 		{
 			RefreshPrefsPrefix();
 			
-			LoadApiKey();
+			LoadAuthKey();
 			
 			mLogin = GetLogin();
 			mPassword = GetPassword();
@@ -79,8 +79,7 @@ namespace MiniIT.Snipe.Editor
 
 		protected void OnDisable()
 		{
-			SaveLogin(mLogin);
-			SavePassword(mPassword);
+			SaveLoginAndPassword();
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
@@ -90,64 +89,114 @@ namespace MiniIT.Snipe.Editor
 		{
 			return EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.login");
 		}
-		private static void SaveLogin(string value)
-		{
-			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.login", value);
-		}
 		
 		private static string GetPassword()
 		{
 			return EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.password");
 		}
-		private static void SavePassword(string value)
+		
+		private void SaveLoginAndPassword()
 		{
-			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.password", value);
+			string key_login = $"{mPrefsPrefix}_SnipeApiDownloader.login";
+			string key_password = $"{mPrefsPrefix}_SnipeApiDownloader.password";
+			if (!string.IsNullOrEmpty(mLogin) && !string.IsNullOrEmpty(mPassword) || EditorPrefs.HasKey(key_login))
+			{
+				EditorPrefs.SetString(key_login, mLogin);
+				EditorPrefs.SetString(key_password, mPassword);
+			}
 		}
 		
-		private void LoadApiKey()
+		private string GetAuthKeyFilePath()
 		{
-			if (mAuthKey == null)
-				mAuthKey = new SnipeAuthKey();
-			mAuthKey.project = 0;
-			
-			string path = Path.Combine(Application.dataPath, "..", "snipe_api_key.json");
+			return Path.Combine(Application.dataPath, "..", "snipe_api_key");
+		}
+		
+		private void LoadAuthKey()
+		{
+			string path = GetAuthKeyFilePath();
 			if (File.Exists(path))
 			{
-				string json = File.ReadAllText(path);
-				UnityEditor.EditorJsonUtility.FromJsonOverwrite(json, mAuthKey);
-				
-				if (mAuthKey.IsValid)
-				{
-					mProjectId = mAuthKey.project.ToString();
-				}
+				string content = File.ReadAllText(path);
+				SetAuthKey(content);
+			}
+		}
+		
+		private void SaveAuthKey()
+		{
+			string path = GetAuthKeyFilePath();
+			if (string.IsNullOrEmpty(mAuthKey))
+			{
+				if (File.Exists(path))
+					File.Delete(path);
+			}
+			else
+			{
+				File.WriteAllText(path, mAuthKey);
+			}
+		}
+		
+		private void SetAuthKey(string value)
+		{
+			string project_id = null;
+			if (!string.IsNullOrEmpty(value))
+			{
+				string[] parts = value.Split('-');
+				if (parts.Length > 3 && parts[0] == "api")
+					project_id = parts[1];
+			}
+			
+			if (!string.IsNullOrEmpty(project_id))
+			{
+				mAuthKey = value;
+				mProjectId = project_id;
+			}
+			else
+			{
+				mAuthKey = null;
 			}
 		}
 
 		private void OnGUI()
 		{
+			EditorGUILayout.Space();
+			
 			EditorGUIUtility.labelWidth = 100;
 			
-			if (mAuthKey == null || !mAuthKey.IsValid)
+			string auth_key = EditorGUILayout.TextField("API Key", mAuthKey);
+			if (auth_key != mAuthKey)
 			{
+				SetAuthKey(auth_key);
+				SaveAuthKey();
+			}
+			
+			if (string.IsNullOrEmpty(mAuthKey))
+			{
+				GUILayout.BeginHorizontal();
+				EditorGUILayout.LabelField("");
+				EditorGUILayout.LabelField("OR");
+				GUILayout.EndHorizontal();
+				
 				string login = EditorGUILayout.TextField("Login", mLogin);
 				if (login != mLogin)
 				{
 					mLogin = login;
-					SaveLogin(mLogin);
+					SaveLoginAndPassword();
 				}
 				string password = EditorGUILayout.PasswordField("Password", mPassword);
 				if (password != mPassword)
 				{
 					mPassword = password;
-					SavePassword(mPassword);
+					SaveLoginAndPassword();
 				}
 			}
 			
-			bool auth_valid = (mAuthKey != null && mAuthKey.IsValid) || (!string.IsNullOrEmpty(mLogin) && !string.IsNullOrEmpty(mPassword));
+			EditorGUILayout.Space();
+			
+			bool auth_valid = (!string.IsNullOrEmpty(mAuthKey) && !string.IsNullOrEmpty(mProjectId)) || (!string.IsNullOrEmpty(mLogin) && !string.IsNullOrEmpty(mPassword));
 
 			EditorGUI.BeginDisabledGroup(!auth_valid);
 
-			if (mAuthKey == null || !mAuthKey.IsValid)
+			if (string.IsNullOrEmpty(mAuthKey))
 			{
 				GUILayout.BeginHorizontal();
 
@@ -158,7 +207,7 @@ namespace MiniIT.Snipe.Editor
 					int selected_index = EditorGUILayout.Popup(Mathf.Max(0, mSelectedProjectIndex), mProjectsList);
 
 					GUILayout.FlexibleSpace();
-					if (selected_index != mSelectedProjectIndex)
+					if (selected_index >= 0 && selected_index != mSelectedProjectIndex)
 					{
 						mSelectedProjectIndex = selected_index;
 						string selected_item = mProjectsList[mSelectedProjectIndex];
@@ -178,8 +227,11 @@ namespace MiniIT.Snipe.Editor
 			}
 			else
 			{
-				EditorGUILayout.LabelField($"Project: [{mProjectId}] - extracted from api key file");
+				EditorGUILayout.LabelField($"Project: [{mProjectId}] - extracted from the api key");
 			}
+			
+			EditorGUILayout.Space();
+			EditorGUILayout.Space();
 
 			GUILayout.BeginHorizontal();
 			mDirectoryPath = EditorGUILayout.TextField("Directory", mDirectoryPath);
@@ -215,8 +267,8 @@ namespace MiniIT.Snipe.Editor
 
 		private async Task FetchProjectsList()
 		{
-			if (mAuthKey != null && mAuthKey.IsValid)
-				mToken = mAuthKey.key;
+			if (!string.IsNullOrEmpty(mAuthKey))
+				mToken = mAuthKey;
 			else
 				mToken = await RequestAuthToken();
 			
@@ -273,8 +325,8 @@ namespace MiniIT.Snipe.Editor
 		{
 			UnityEngine.Debug.Log("DownloadSnipeApi - start");
 			
-			if (mAuthKey != null && mAuthKey.IsValid)
-				mToken = mAuthKey.key;
+			if (!string.IsNullOrEmpty(mAuthKey))
+				mToken = mAuthKey;
 			else
 				mToken = await RequestAuthToken();
 			
@@ -359,15 +411,6 @@ namespace MiniIT.Snipe.Editor
 		public string stringID;
 		public string name;
 		public bool isDev;
-	}
-	
-	[System.Serializable]
-	internal class SnipeAuthKey
-	{
-		public int project;
-		public string key;
-		
-		public bool IsValid => project > 0 && !string.IsNullOrEmpty(key);
 	}
 
 #pragma warning restore 0649
