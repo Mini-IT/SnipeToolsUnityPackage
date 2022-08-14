@@ -67,11 +67,24 @@ namespace MiniIT.Snipe.Editor
 			mPassword = GetPassword();
 			
 			mProjectId = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
-			mDirectoryPath = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
 			mSnipeVersionSuffix = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 
+			string[] results = AssetDatabase.FindAssets("SnipeApi");
+			if (results != null && results.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(results[0]);
+				if (path.EndsWith("SnipeApi.cs"))
+				{
+					// Application.dataPath edns with "Assets"
+					// path starts with "Assets" and ends with "SnipeApi.cs"
+					mDirectoryPath = Application.dataPath + path.Substring(6, path.Length - 17);
+				}
+			}
+			
 			if (string.IsNullOrEmpty(mDirectoryPath))
+			{
 				mDirectoryPath = Application.dataPath;
+			}
 			
 			if (SnipeAutoUpdater.AutoUpdateEnabled)
 				SnipeAutoUpdater.CheckUpdateAvailable();
@@ -81,7 +94,6 @@ namespace MiniIT.Snipe.Editor
 		{
 			SaveLoginAndPassword();
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
-			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.directory", mDirectoryPath);
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 		}
 		
