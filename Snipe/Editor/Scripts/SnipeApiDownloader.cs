@@ -33,7 +33,7 @@ namespace MiniIT.Snipe.Editor
 		private string[] mProjectsList;
 		private int mSelectedProjectIndex = -1;
 		
-		private string mAuthKey;
+		private static string mAuthKey;
 
 		public static string RefreshPrefsPrefix()
 		{
@@ -281,10 +281,7 @@ namespace MiniIT.Snipe.Editor
 
 		private async Task FetchProjectsList()
 		{
-			if (!string.IsNullOrEmpty(mAuthKey))
-				mToken = mAuthKey;
-			else
-				mToken = await RequestAuthToken();
+			mToken = await GetAuthToken();
 			
 			if (string.IsNullOrEmpty(mToken))
 			{
@@ -339,10 +336,7 @@ namespace MiniIT.Snipe.Editor
 		{
 			UnityEngine.Debug.Log("DownloadSnipeApi - start");
 			
-			if (!string.IsNullOrEmpty(mAuthKey))
-				mToken = mAuthKey;
-			else
-				mToken = await RequestAuthToken();
+			mToken = await GetAuthToken();
 			
 			if (string.IsNullOrEmpty(mToken))
 			{
@@ -370,8 +364,16 @@ namespace MiniIT.Snipe.Editor
 
 			UnityEngine.Debug.Log("DownloadSnipeApi - done");
 		}
+		
+		public static async Task<string> GetAuthToken()
+		{
+			if (!string.IsNullOrEmpty(mAuthKey))
+				return mAuthKey;
+			
+			return await RequestAuthToken();
+		}
 
-		public static async Task<string> RequestAuthToken()
+		private static async Task<string> RequestAuthToken()
 		{
 			RefreshPrefsPrefix();
 			string login = GetLogin();

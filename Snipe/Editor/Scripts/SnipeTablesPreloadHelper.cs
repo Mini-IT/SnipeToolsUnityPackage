@@ -44,7 +44,7 @@ public class SnipeTablesPreloadHelper
 		{
 			UnityEngine.Debug.Log("[SnipeTablesPreloadHelper] DownloadResponseList - request token");
 
-			token = await SnipeApiDownloader.RequestAuthToken();
+			token = await SnipeApiDownloader.GetAuthToken();
 			if (string.IsNullOrEmpty(token))
 			{
 				UnityEngine.Debug.Log("[SnipeTablesPreloadHelper] - FAILED to get token");
@@ -53,37 +53,27 @@ public class SnipeTablesPreloadHelper
 		}
 		
 		RefreshPrefsPrefix();
-		string project_id = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id");
+		int project_id = EditorPrefs.GetInt($"{mPrefsPrefix}_SnipeApiDownloader.project_id");
 		string project_string_id = "";
 		
 		UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] project id = {project_id}");
 		
-		if (!string.IsNullOrEmpty(project_id))
+		if (project_id > 0)
 		{
 			UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] Fetching projects list");
 			
-			using (var projects_list_client = new HttpClient())
+			using (var project_string_id_client = new HttpClient())
 			{
-				projects_list_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-				var response = await projects_list_client.GetAsync($"https://edit.snipe.dev/api/v1/projects");
+				project_string_id_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+				var response = await project_string_id_client.GetAsync($"https://edit.snipe.dev/api/v1/project/{project_id}/stringID");
 				var content = await response.Content.ReadAsStringAsync();
 				
 				// UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] {content}");
 				
-				var list_wrapper = new TablesListResponseListWrapper();
-				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
-				if (list_wrapper.data is List<TablesListResponseListItem> list)
-				{
-					foreach (var item in list)
-					{
-						if (Convert.ToString(item.id) == project_id)
-						{
-							project_string_id = item.stringID;
-							break;
-						}
-					}
-				}
-				
+				var response_data = new ProjectStringIdResponseData();
+				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response_data);
+				project_string_id = response_data.stringID;
+				UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] Project StringID request errorCode = {response_data.errorCode}");
 				UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] Project StringID = {project_string_id}");
 			}
 			
@@ -94,6 +84,8 @@ public class SnipeTablesPreloadHelper
 				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 				var response = await client.GetAsync($"https://edit.snipe.dev/api/v1/project/{project_id}/tableTypes");
 				var content = await response.Content.ReadAsStringAsync();
+				
+				// UnityEngine.Debug.Log($"[SnipeTablesPreloadHelper] {content}");
 				
 				var list_wrapper = new TablesListResponseListWrapper();
 				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
@@ -116,6 +108,9 @@ public class SnipeTablesPreloadHelper
 							
 							foreach (var item in list)
 							{
+								if (!item.isPublic)
+									continue;
+
 								string table_name = item.stringID;
 								if (!string.IsNullOrEmpty(table_name))
 								{
@@ -173,6 +168,14 @@ internal class TablesListResponseListWrapper
 internal class TablesListResponseListItem
 {
 	public int id;
+	public string stringID;
+	public bool isPublic;
+}
+
+[System.Serializable]
+internal class ProjectStringIdResponseData
+{
+	public string errorCode;
 	public string stringID;
 }
 
