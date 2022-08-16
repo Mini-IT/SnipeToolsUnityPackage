@@ -20,7 +20,7 @@ namespace MiniIT.Snipe.Editor
 	{
 		private static readonly string[] SNIPE_VERSIONS = new string[] { "V5", "V6" };
 
-		private string mProjectId = "0";
+		private int mProjectId = 0;
 		private string mDirectoryPath;
 		private string mLogin;
 		private string mPassword;
@@ -66,7 +66,8 @@ namespace MiniIT.Snipe.Editor
 			mLogin = GetLogin();
 			mPassword = GetPassword();
 			
-			mProjectId = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
+			if (mProjectId <= 0)
+				mProjectId = EditorPrefs.GetInt($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
 			mSnipeVersionSuffix = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 
 			string[] results = AssetDatabase.FindAssets("SnipeApi");
@@ -93,7 +94,8 @@ namespace MiniIT.Snipe.Editor
 		protected void OnDisable()
 		{
 			SaveLoginAndPassword();
-			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
+			if (mProjectId > 0)
+				EditorPrefs.SetInt($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
 			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 		}
 		
@@ -160,7 +162,7 @@ namespace MiniIT.Snipe.Editor
 			if (!string.IsNullOrEmpty(project_id))
 			{
 				mAuthKey = value;
-				mProjectId = project_id;
+				int.TryParse(project_id, out mProjectId);
 			}
 			else
 			{
@@ -204,7 +206,7 @@ namespace MiniIT.Snipe.Editor
 			
 			EditorGUILayout.Space();
 			
-			bool auth_valid = (!string.IsNullOrEmpty(mAuthKey) && !string.IsNullOrEmpty(mProjectId)) || (!string.IsNullOrEmpty(mLogin) && !string.IsNullOrEmpty(mPassword));
+			bool auth_valid = (!string.IsNullOrEmpty(mAuthKey) && mProjectId > 0) || (!string.IsNullOrEmpty(mLogin) && !string.IsNullOrEmpty(mPassword));
 
 			EditorGUI.BeginDisabledGroup(!auth_valid);
 
@@ -225,7 +227,7 @@ namespace MiniIT.Snipe.Editor
 						string selected_item = mProjectsList[mSelectedProjectIndex];
 						if (int.TryParse(selected_item.Substring(0, selected_item.IndexOf("-")).Trim(), out int project_id))
 						{
-							mProjectId = project_id.ToString();
+							mProjectId = project_id;
 						}
 					}
 				}
@@ -314,7 +316,7 @@ namespace MiniIT.Snipe.Editor
 					{
 						var item = list[i];
 						mProjectsList[i] = $"{item.id} - {item.stringID} - {item.name} - {(item.isDev ? "DEV" : "LIVE")}";
-						if (item.id.ToString() == mProjectId)
+						if (item.id == mProjectId)
 							mSelectedProjectIndex = i;
 					}
 				}
