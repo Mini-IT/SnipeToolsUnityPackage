@@ -63,7 +63,7 @@ namespace MiniIT.Snipe.Editor
 						Debug.Log($"[SnipeToolsAutoUpdater] A newer version found: {newer_version_code}");
 						
 						if (EditorUtility.DisplayDialog("Snipe Tools Auto Updater",
-							$"Newer version of Snipe Tools detected: {newer_version_code}\n(Installed version is {current_version_code})",
+							$"Snipe Tools {newer_version_code}\n\nNewer version of Snipe Tools found\n(Installed version is {current_version_code})",
 							"Update now", "Dismiss"))
 						{
 							SnipeUpdater.InstallSnipeToolsPackage();
