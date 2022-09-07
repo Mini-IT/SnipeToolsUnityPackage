@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR
+﻿#if UNITY_EDITOR && !UNITY_CLOUD_BUILD
 
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,6 @@ using UnityEditor;
 
 namespace MiniIT.Snipe.Editor
 {
-
 	public class SnipeApiDownloader : EditorWindow
 	{
 		private static readonly string[] SNIPE_VERSIONS = new string[] { "V5", "V6" };
