@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR && !UNITY_CLOUD_BUILD
+﻿#if UNITY_EDITOR
 
 using System;
 using System.Collections.Generic;
