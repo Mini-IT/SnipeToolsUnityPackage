@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && !UNITY_CLOUD_BUILD
+#if UNITY_EDITOR
 
 using System;
 using UnityEditor;
@@ -7,7 +7,9 @@ using UnityEngine.SceneManagement;
 
 namespace MiniIT.Snipe.Editor
 {
+#if !UNITY_CLOUD_BUILD
 	[InitializeOnLoad]
+#endif
 	public static class SnipeAutoUpdater
 	{
 		private const string PREF_AUTO_UPDATE_ENABLED = "Snipe.AutoUpdateEnabled";
@@ -48,7 +50,9 @@ namespace MiniIT.Snipe.Editor
 		
 		static SnipeAutoUpdater()
 		{
+#if !UNITY_CLOUD_BUILD
 			Run();
+#endif
 		}
 		
 		//[MenuItem("Snipe/Run Autoupdater")]

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR && !UNITY_CLOUD_BUILD
+#if UNITY_EDITOR
 
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,9 @@ using UnityEditor.PackageManager.Requests;
 
 namespace MiniIT.Snipe.Editor
 {
+#if !UNITY_CLOUD_BUILD
 	[InitializeOnLoad]
+#endif
 	public static class SnipeToolsAutoUpdater
 	{
 		internal const string GIT_API_BASE_URL = "https://api.github.com/repos/Mini-IT/SnipeToolsUnityPackage/";
@@ -24,6 +26,10 @@ namespace MiniIT.Snipe.Editor
 		//[MenuItem("Snipe/Check for SnipeTools Update")]
 		public static async void CheckUpdateAvailable()
 		{
+#if UNITY_CLOUD_BUILD
+			return;
+#endif
+			
 			if (mProcessing)
 				return;
 			mProcessing = true;
