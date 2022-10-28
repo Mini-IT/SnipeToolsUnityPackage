@@ -17,13 +17,13 @@ namespace MiniIT.Snipe.Editor
 {
 	public class SnipeApiDownloader : EditorWindow
 	{
-		private static readonly string[] SNIPE_VERSIONS = new string[] { "V5", "V6" };
+		//private static readonly string[] SNIPE_VERSIONS = new string[] { "V5", "V6" };
 
 		private int mProjectId = 0;
 		private string mDirectoryPath;
 		private string mLogin;
 		private string mPassword;
-		private string mSnipeVersionSuffix = SNIPE_VERSIONS[1]; //"V6";
+		private string mSnipeVersionSuffix = "V6"; // SNIPE_VERSIONS[1]; //"V6";
 		private bool mGetTablesList = true;
 
 		private static string mPrefsPrefix;
@@ -67,7 +67,7 @@ namespace MiniIT.Snipe.Editor
 			
 			if (mProjectId <= 0)
 				mProjectId = EditorPrefs.GetInt($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
-			mSnipeVersionSuffix = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
+			// mSnipeVersionSuffix = EditorPrefs.GetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 
 			string[] results = AssetDatabase.FindAssets("SnipeApi");
 			if (results != null && results.Length > 0)
@@ -95,7 +95,7 @@ namespace MiniIT.Snipe.Editor
 			SaveLoginAndPassword();
 			if (mProjectId > 0)
 				EditorPrefs.SetInt($"{mPrefsPrefix}_SnipeApiDownloader.project_id", mProjectId);
-			EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
+			// EditorPrefs.SetString($"{mPrefsPrefix}_SnipeApiDownloader.snipe_version_suffix", mSnipeVersionSuffix);
 		}
 		
 		private static string GetLogin()
@@ -257,16 +257,18 @@ namespace MiniIT.Snipe.Editor
 				}
 			}
 			GUILayout.EndHorizontal();
-
-			mGetTablesList = EditorGUILayout.Toggle("Get tables list", mGetTablesList);
+			
+			EditorGUILayout.Space();
 
 			EditorGUILayout.BeginHorizontal();
+			
+			mGetTablesList = EditorGUILayout.Toggle("Get tables list", mGetTablesList);
+			
+			// GUILayout.Label("Snipe Version", GUILayout.Width(EditorGUIUtility.labelWidth));
 
-			GUILayout.Label("Snipe Version", GUILayout.Width(EditorGUIUtility.labelWidth));
-
-			int index = Array.IndexOf(SNIPE_VERSIONS, mSnipeVersionSuffix);
-			index = EditorGUILayout.Popup(index, SNIPE_VERSIONS);
-			mSnipeVersionSuffix = SNIPE_VERSIONS[index];
+			// int index = Array.IndexOf(SNIPE_VERSIONS, mSnipeVersionSuffix);
+			// index = EditorGUILayout.Popup(index, SNIPE_VERSIONS);
+			// mSnipeVersionSuffix = SNIPE_VERSIONS[index];
 
 			GUILayout.FlexibleSpace();
 
