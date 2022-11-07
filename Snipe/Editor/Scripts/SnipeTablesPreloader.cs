@@ -5,18 +5,16 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
-using System.Collections;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading;
 using System.Threading.Tasks;
+using MiniIT.Snipe.Editor;
+using System.Net.Http.Headers;
 
-public class PreloadSnipeTables : IPreprocessBuildWithReport
+public class SnipeTablesPreloader : IPreprocessBuildWithReport
 {
 	private static string mTablesUrl;
-	private static List<string> mTableNames;
+	private static HashSet<string> mTableNames;
 	
 	private static string mVersion;
 	private static string mStreamingAssetsPath;
@@ -35,44 +33,20 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 		Debug.Log("[PreloadSnipeTables] - OnPreprocessBuild finished");
 	}
 	
-	private static string GetTableListFilePath()
-	{
-		return Path.Combine(Application.dataPath, "snipe_tables.txt");
-	}
-	
 	private static string GetTablesVersionFilePath()
 	{
 		return Path.Combine(Application.streamingAssetsPath, "snipe_tables_version.txt");
 	}
 
 	[MenuItem ("Snipe/Preload Tables")]
-	public static void Load()
+	public static async void Load()
 	{
 		Debug.Log("[PreloadSnipeTables] - started");
 		
 		mStreamingAssetsPath = Application.streamingAssetsPath;
-		
-		var filepath = GetTableListFilePath();
-		if (File.Exists(filepath))
-		{
-			mTableNames = new List<string>();
-			using (StreamReader sr = File.OpenText(filepath))
-			{
-				string s = "";
-				while (!string.IsNullOrEmpty(s = sr.ReadLine()))
-				{
-					if (s.ToLower().StartsWith("http") && s.Contains("://"))
-						mTablesUrl = s;
-					else
-						mTableNames.Add(s);
-				}
-			}
-		}
-		else
-		{
-			mTableNames = null;
-		}
-		
+
+		await DownloadTablesList();
+
 		if (mTableNames == null || mTableNames.Count == 0)
 		{
 			Debug.Log("[PreloadSnipeTables] - Tables list is empty");
@@ -113,8 +87,84 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 		
 		Debug.Log("[PreloadSnipeTables] - done");
 	}
-	
-	protected static async Task LoadVersion()
+
+	public static async Task DownloadTablesList()
+	{
+		Debug.Log("[SnipeTablesPreloader] DownloadResponseList - start");
+
+		if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+			SnipeAuthKey.Load();
+		if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+		{
+			Debug.Log("[SnipeTablesPreloader] - FAILED - invalid AuthKey");
+			return;
+		}
+
+		string project_string_id = "";
+
+		Debug.Log($"[SnipeTablesPreloader] project id = {SnipeAuthKey.ProjectId}");
+
+		if (SnipeAuthKey.ProjectId > 0)
+		{
+			Debug.Log($"[SnipeTablesPreloader] Fetching projects list");
+
+			using (var project_string_id_client = new HttpClient())
+			{
+				project_string_id_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
+				var response = await project_string_id_client.GetAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/stringID");
+				var content = await response.Content.ReadAsStringAsync();
+
+				// Debug.Log($"[SnipeTablesPreloader] {content}");
+
+				var response_data = new ProjectStringIdResponseData();
+				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response_data);
+				project_string_id = response_data.stringID;
+				Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {response_data.errorCode}");
+				Debug.Log($"[SnipeTablesPreloader] Project StringID = {project_string_id}");
+			}
+
+			Debug.Log($"[SnipeTablesPreloader] Fetching tables list for project {project_string_id}");
+
+			using (var client = new HttpClient())
+			{
+				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
+				var response = await client.GetAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/tableTypes");
+				var content = await response.Content.ReadAsStringAsync();
+
+				// Debug.Log($"[SnipeTablesPreloader] {content}");
+
+				var list_wrapper = new TablesListResponseListWrapper();
+				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
+				if (list_wrapper.data is List<TablesListResponseListItem> list)
+				{
+					Debug.Log($"[SnipeTablesPreloader] tables count = {list.Count}");
+
+					mTableNames = new HashSet<string>();
+
+					foreach (var item in list)
+					{
+						if (!item.isPublic)
+							continue;
+
+						string table_name = item.stringID;
+						if (!string.IsNullOrEmpty(table_name))
+						{
+							mTableNames.Add(table_name);
+						}
+					}
+
+					// common tables for all projects
+					mTableNames.Add("Items");
+					mTableNames.Add("Logic");
+					mTableNames.Add("Calendar");
+				}
+			}
+		}
+
+		Debug.Log("[SnipeTablesPreloader] DownloadResponseList - done");
+	}
+
+	private static async Task LoadVersion()
 	{
 		mVersion = "";
 		string url = $"{mTablesUrl}/version.txt";
@@ -216,5 +266,26 @@ public class PreloadSnipeTables : IPreprocessBuildWithReport
 			Debug.LogError("[PreloadSnipeTables] Failed to load table - " + table_name);
 		}
 	}
-	
+
+	[System.Serializable]
+	internal class TablesListResponseListWrapper
+	{
+		public List<TablesListResponseListItem> data;
+	}
+
+	[System.Serializable]
+	internal class TablesListResponseListItem
+	{
+		public int id;
+		public string stringID;
+		public bool isPublic;
+	}
+
+	[System.Serializable]
+	internal class ProjectStringIdResponseData
+	{
+		public string errorCode;
+		public string stringID;
+	}
+
 }
