@@ -20,15 +20,9 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	private static string mStreamingAssetsPath;
 	
 	public int callbackOrder { get { return 10; } }
-	public void OnPreprocessBuild(BuildReport report)
+	public async void OnPreprocessBuild(BuildReport report)
 	{
-		StaticOnPreprocessBuild();
-	}
-	
-	// [MenuItem ("Snipe/Preload TEST")]
-	public static void StaticOnPreprocessBuild()
-	{
-		Load();
+		await Load();
 	}
 	
 	private static string GetTablesVersionFilePath()
@@ -42,7 +36,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	}
 
 	[MenuItem ("Snipe/Preload Tables")]
-	public static async void Load()
+	public static async Task Load()
 	{
 		Debug.Log("[SnipeTablesPreloader] Load - started");
 		
