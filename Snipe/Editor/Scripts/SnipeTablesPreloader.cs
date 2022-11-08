@@ -29,19 +29,22 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	public static void StaticOnPreprocessBuild()
 	{
 		Load();
-		
-		Debug.Log("[SnipeTablesPreloader] - OnPreprocessBuild finished");
 	}
 	
 	private static string GetTablesVersionFilePath()
 	{
 		return Path.Combine(Application.streamingAssetsPath, "snipe_tables_version.txt");
 	}
+	
+	public static string GetTablesUrl(string project_string_id)
+	{
+		return $"https://static-dev.snipe.dev/{project_string_id}/";
+	}
 
 	[MenuItem ("Snipe/Preload Tables")]
 	public static async void Load()
 	{
-		Debug.Log("[SnipeTablesPreloader] - started");
+		Debug.Log("[SnipeTablesPreloader] Load - started");
 		
 		mStreamingAssetsPath = Application.streamingAssetsPath;
 
@@ -85,7 +88,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		
         AssetDatabase.Refresh();
 		
-		Debug.Log("[SnipeTablesPreloader] - done");
+		Debug.Log("[SnipeTablesPreloader] Load - done");
 	}
 
 	public static async Task DownloadTablesList()
@@ -124,6 +127,10 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			}
 
 			Debug.Log($"[SnipeTablesPreloader] Fetching tables list for project {project_string_id}");
+			
+			mTablesUrl = GetTablesUrl(project_string_id);
+			
+			Debug.Log($"[SnipeTablesPreloader] TablesUrl = {mTablesUrl}");
 
 			using (var client = new HttpClient())
 			{
