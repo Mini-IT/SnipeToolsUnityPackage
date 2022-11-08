@@ -30,7 +30,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	{
 		Load();
 		
-		Debug.Log("[PreloadSnipeTables] - OnPreprocessBuild finished");
+		Debug.Log("[SnipeTablesPreloader] - OnPreprocessBuild finished");
 	}
 	
 	private static string GetTablesVersionFilePath()
@@ -41,7 +41,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	[MenuItem ("Snipe/Preload Tables")]
 	public static async void Load()
 	{
-		Debug.Log("[PreloadSnipeTables] - started");
+		Debug.Log("[SnipeTablesPreloader] - started");
 		
 		mStreamingAssetsPath = Application.streamingAssetsPath;
 
@@ -49,11 +49,11 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 		if (mTableNames == null || mTableNames.Count == 0)
 		{
-			Debug.Log("[PreloadSnipeTables] - Tables list is empty");
+			Debug.Log("[SnipeTablesPreloader] - Tables list is empty");
 			return;
 		}
 		
-		Debug.Log("[PreloadSnipeTables] Tables count = " + mTableNames.Count);
+		Debug.Log("[SnipeTablesPreloader] Tables count = " + mTableNames.Count);
 		
 		var files = Directory.EnumerateFiles(mStreamingAssetsPath, "*.jsongz*");
 		foreach (string filename in files)
@@ -85,7 +85,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		
         AssetDatabase.Refresh();
 		
-		Debug.Log("[PreloadSnipeTables] - done");
+		Debug.Log("[SnipeTablesPreloader] - done");
 	}
 
 	public static async Task DownloadTablesList()
@@ -169,7 +169,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		mVersion = "";
 		string url = $"{mTablesUrl}/version.txt";
 		
-		Debug.Log($"[PreloadSnipeTables] LoadVersion from {url}");
+		Debug.Log($"[SnipeTablesPreloader] LoadVersion from {url}");
 		
 		try
 		{
@@ -180,14 +180,14 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 			if (loader_task.IsFaulted || loader_task.IsCanceled)
 			{
-				Debug.LogError("[PreloadSnipeTables] LoadVersion - Failed to load tables version - (loader failed)");
+				Debug.LogError("[SnipeTablesPreloader] LoadVersion - Failed to load tables version - (loader failed)");
 				return;
 			}
 			
 			HttpResponseMessage response = loader_task.Result;
 			if (!response.IsSuccessStatusCode)
 			{
-				Debug.LogError($"[PreloadSnipeTables] LoadVersion - Failed - http error: {response.StatusCode}");
+				Debug.LogError($"[SnipeTablesPreloader] LoadVersion - Failed - http error: {response.StatusCode}");
 				return;
 			}
 			
@@ -196,7 +196,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 				mVersion = reader.ReadLine().Trim();
 			}
 			
-			Debug.Log($"[PreloadSnipeTables] Version = {mVersion}");
+			Debug.Log($"[SnipeTablesPreloader] Version = {mVersion}");
 			
 			if (!string.IsNullOrWhiteSpace(mVersion))
 			{
@@ -207,7 +207,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		catch (Exception)
 		{
 			mVersion = "";
-			Debug.LogError("[PreloadSnipeTables] LoadVersion - Failed to read tables version");
+			Debug.LogError("[SnipeTablesPreloader] LoadVersion - Failed to read tables version");
 		}
 	}
 	
@@ -223,7 +223,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		Debug.Log(filename);
 		string cache_path = Path.Combine(mStreamingAssetsPath, filename);
 		
-		Debug.Log("[PreloadSnipeTables] Loading table " + url);
+		Debug.Log("[SnipeTablesPreloader] Loading table " + url);
 		
 		try
 		{
@@ -234,14 +234,14 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			
 			if (loader_task.IsFaulted || loader_task.IsCanceled || !loader_task.Result.IsSuccessStatusCode)
 			{
-				Debug.LogError($"[PreloadSnipeTables] Failed to load table - {table_name}   (loader failed)");
+				Debug.LogError($"[SnipeTablesPreloader] Failed to load table - {table_name}   (loader failed)");
 				return;
 			}
 			
 			HttpResponseMessage response = loader_task.Result;
 			if (!response.IsSuccessStatusCode)
 			{
-				Debug.LogError($"[PreloadSnipeTables] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
+				Debug.LogError($"[SnipeTablesPreloader] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
 				return;
 			}
 			
@@ -256,14 +256,14 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 					}
 					catch (Exception ex)
 					{
-						Debug.LogError("[PreloadSnipeTables] Failed to save - " + table_name + " - " + ex.Message);
+						Debug.LogError("[SnipeTablesPreloader] Failed to save - " + table_name + " - " + ex.Message);
 					}
 				}
 			}
 		}
 		catch (Exception)
 		{
-			Debug.LogError("[PreloadSnipeTables] Failed to load table - " + table_name);
+			Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name);
 		}
 	}
 
