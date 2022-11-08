@@ -90,7 +90,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 	public static async Task DownloadTablesList()
 	{
-		Debug.Log("[SnipeTablesPreloader] DownloadResponseList - start");
+		Debug.Log("[SnipeTablesPreloader] DownloadTablesList - start");
 
 		if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
 			SnipeAuthKey.Load();
@@ -161,7 +161,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			}
 		}
 
-		Debug.Log("[SnipeTablesPreloader] DownloadResponseList - done");
+		Debug.Log("[SnipeTablesPreloader] DownloadTablesList - done");
 	}
 
 	private static async Task LoadVersion()
