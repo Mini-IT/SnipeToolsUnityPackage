@@ -20,9 +20,13 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	private static string mStreamingAssetsPath;
 	
 	public int callbackOrder { get { return 10; } }
-	public async void OnPreprocessBuild(BuildReport report)
+	public void OnPreprocessBuild(BuildReport report)
 	{
-		await Load();
+		Debug.Log("[SnipeTablesPreloader] OnPreprocessBuild - started");
+		
+		Load();
+		
+		Debug.Log("[SnipeTablesPreloader] OnPreprocessBuild - finished");
 	}
 	
 	private static string GetTablesVersionFilePath()
@@ -36,13 +40,13 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	}
 
 	[MenuItem ("Snipe/Preload Tables")]
-	public static async Task Load()
+	public static void Load()
 	{
 		Debug.Log("[SnipeTablesPreloader] Load - started");
 		
 		mStreamingAssetsPath = Application.streamingAssetsPath;
 
-		await DownloadTablesList();
+		DownloadTablesList();
 
 		if (mTableNames == null || mTableNames.Count == 0)
 		{
@@ -85,7 +89,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		Debug.Log("[SnipeTablesPreloader] Load - done");
 	}
 
-	public static async Task DownloadTablesList()
+	public static void DownloadTablesList()
 	{
 		Debug.Log("[SnipeTablesPreloader] DownloadTablesList - start");
 
@@ -108,10 +112,9 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			using (var project_string_id_client = new HttpClient())
 			{
 				project_string_id_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-				var response = await project_string_id_client.GetAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/stringID");
-				var content = await response.Content.ReadAsStringAsync();
+				var content = project_string_id_client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/stringID").Result;
 
-				// Debug.Log($"[SnipeTablesPreloader] {content}");
+				Debug.Log($"[SnipeTablesPreloader] {content}");
 
 				var response_data = new ProjectStringIdResponseData();
 				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response_data);
@@ -129,8 +132,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			using (var client = new HttpClient())
 			{
 				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-				var response = await client.GetAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/tableTypes");
-				var content = await response.Content.ReadAsStringAsync();
+				var content = client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/tableTypes").Result;
 
 				// Debug.Log($"[SnipeTablesPreloader] {content}");
 

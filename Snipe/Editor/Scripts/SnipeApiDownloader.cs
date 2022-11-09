@@ -120,7 +120,7 @@ namespace MiniIT.Snipe.Editor
 			await Task.Yield();
 			if (mGetTablesList)
 			{
-				await SnipeTablesPreloader.DownloadTablesList();
+				SnipeTablesPreloader.DownloadTablesList();
 			}
 			AssetDatabase.Refresh();
 			this.Close();
