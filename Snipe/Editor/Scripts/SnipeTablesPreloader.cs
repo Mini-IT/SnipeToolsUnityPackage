@@ -183,14 +183,14 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 			if (loader_task.IsFaulted || loader_task.IsCanceled)
 			{
-				Debug.LogError("[SnipeTablesPreloader] LoadVersion - Failed to load tables version - (loader failed)");
+				Debug.LogWarning("[SnipeTablesPreloader] LoadVersion - Failed to load tables version - (loader failed)");
 				return;
 			}
 			
 			HttpResponseMessage response = loader_task.Result;
 			if (!response.IsSuccessStatusCode)
 			{
-				Debug.LogError($"[SnipeTablesPreloader] LoadVersion - Failed - http error: {response.StatusCode}");
+				Debug.LogWarning($"[SnipeTablesPreloader] LoadVersion - Failed - http error: {response.StatusCode}");
 				return;
 			}
 			
@@ -256,6 +256,8 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 					{
 						file_content_stream.Position = 0;
 						file_content_stream.CopyTo(cache_write_stream);
+						
+						Debug.Log("[SnipeTablesPreloader] Table saved: " + cache_path);
 					}
 					catch (Exception ex)
 					{
