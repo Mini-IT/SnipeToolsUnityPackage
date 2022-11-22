@@ -74,13 +74,20 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		if (File.Exists(version_file_path))
 			File.Delete(version_file_path);
 		
-		Task.Run(async () => { await LoadVersion(); }).Wait(10000);
+		if (!Task.Run(async () => { await LoadVersion(); }).Wait(180000))
+		{
+			Debug.LogError("[SnipeTablesPreloader] LoadVersion FAILED by timeout");
+			return;
+		}
 		
 		if (!string.IsNullOrWhiteSpace(mVersion))
 		{
 			foreach (string tablename in mTableNames)
 			{
-				Task.Run(async () => { await LoadTable(tablename); }).Wait(10000);
+				if (!Task.Run(async () => { await LoadTable(tablename); }).Wait(180000))
+				{
+					Debug.LogWarning($"[SnipeTablesPreloader] Loading \"{tablename}\" FAILED by timeout");
+				}
 			}
 		}
 		
