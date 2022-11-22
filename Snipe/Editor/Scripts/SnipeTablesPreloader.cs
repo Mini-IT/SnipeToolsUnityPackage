@@ -84,14 +84,20 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		{
 			foreach (string tablename in mTableNames)
 			{
+				Debug.Log($"[SnipeTablesPreloader] {tablename} - start loading");
+
 				if (!Task.Run(async () => { await LoadTable(tablename); }).Wait(180000))
 				{
 					Debug.LogWarning($"[SnipeTablesPreloader] Loading \"{tablename}\" FAILED by timeout");
 				}
+
+				Debug.Log($"[SnipeTablesPreloader] {tablename} - finish loading");
 			}
 		}
-		
-        AssetDatabase.Refresh();
+
+		Debug.Log("[SnipeTablesPreloader] Load - tables processing finished");
+
+		AssetDatabase.Refresh();
 		
 		Debug.Log("[SnipeTablesPreloader] Load - done");
 	}
@@ -273,9 +279,9 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 				}
 			}
 		}
-		catch (Exception)
+		catch (Exception e)
 		{
-			Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name);
+			Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name + " - " + e.Message);
 		}
 	}
 
