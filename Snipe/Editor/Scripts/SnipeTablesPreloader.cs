@@ -124,16 +124,24 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 			using (var project_string_id_client = new HttpClient())
 			{
-				project_string_id_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-				var content = project_string_id_client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/stringID").Result;
+				try
+				{
+					project_string_id_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
+					var content = project_string_id_client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/stringID").Result;
 
-				Debug.Log($"[SnipeTablesPreloader] {content}");
+					Debug.Log($"[SnipeTablesPreloader] {content}");
 
-				var response_data = new ProjectStringIdResponseData();
-				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response_data);
-				project_string_id = response_data.stringID;
-				Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {response_data.errorCode}");
-				Debug.Log($"[SnipeTablesPreloader] Project StringID = {project_string_id}");
+					var response_data = new ProjectStringIdResponseData();
+					UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response_data);
+					project_string_id = response_data.stringID;
+					Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {response_data.errorCode}");
+					Debug.Log($"[SnipeTablesPreloader] Project StringID = {project_string_id}");
+				}
+				catch (Exception e)
+				{
+					Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch projects list: {e}");
+					return;
+				}
 			}
 
 			Debug.Log($"[SnipeTablesPreloader] Fetching tables list for project {project_string_id}");
@@ -144,35 +152,43 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 			using (var client = new HttpClient())
 			{
-				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-				var content = client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/tableTypes").Result;
-
-				// Debug.Log($"[SnipeTablesPreloader] {content}");
-
-				var list_wrapper = new TablesListResponseListWrapper();
-				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
-				if (list_wrapper.data is List<TablesListResponseListItem> list)
+				try
 				{
-					Debug.Log($"[SnipeTablesPreloader] tables count = {list.Count}");
+					client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
+					var content = client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/tableTypes").Result;
 
-					mTableNames = new HashSet<string>();
+					// Debug.Log($"[SnipeTablesPreloader] {content}");
 
-					foreach (var item in list)
+					var list_wrapper = new TablesListResponseListWrapper();
+					UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
+					if (list_wrapper.data is List<TablesListResponseListItem> list)
 					{
-						if (!item.isPublic)
-							continue;
+						Debug.Log($"[SnipeTablesPreloader] tables count = {list.Count}");
 
-						string table_name = item.stringID;
-						if (!string.IsNullOrEmpty(table_name))
+						mTableNames = new HashSet<string>();
+
+						foreach (var item in list)
 						{
-							mTableNames.Add(table_name);
-						}
-					}
+							if (!item.isPublic)
+								continue;
 
-					// common tables for all projects
-					mTableNames.Add("Items");
-					mTableNames.Add("Logic");
-					mTableNames.Add("Calendar");
+							string table_name = item.stringID;
+							if (!string.IsNullOrEmpty(table_name))
+							{
+								mTableNames.Add(table_name);
+							}
+						}
+
+						// common tables for all projects
+						mTableNames.Add("Items");
+						mTableNames.Add("Logic");
+						mTableNames.Add("Calendar");
+					}
+				}
+				catch (Exception e)
+				{
+					Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch tables list: {e}");
+					return;
 				}
 			}
 		}
