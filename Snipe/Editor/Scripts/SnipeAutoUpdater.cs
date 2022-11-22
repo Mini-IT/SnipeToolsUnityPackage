@@ -2,8 +2,8 @@
 
 using System;
 using UnityEditor;
+using UnityEditor.PackageManager;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace MiniIT.Snipe.Editor
 {
@@ -19,6 +19,7 @@ namespace MiniIT.Snipe.Editor
 		private const string MENU_AUTO_UPDATE_ENABLED = "Snipe/Check for Updates Automatically";
 		
 		private static bool mProcessing = false;
+		private static PackageCollection mInstalledPackages;
 
 		public static bool AutoUpdateEnabled
 		{
@@ -90,7 +91,9 @@ namespace MiniIT.Snipe.Editor
 			mProcessing = true;
 			
 			Debug.Log("[SnipeAutoUpdater] CheckUpdateAvailable");
-			
+
+			SnipeUpdater.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
+			SnipeUpdater.InstalledPackagesListFetched += OnInstalledPackagesListFetched;
 			await SnipeUpdater.FetchVersionsList();
 			
 			if (SnipeUpdater.SnipePackageVersions != null && SnipeUpdater.SnipePackageVersions.Length > 0)
@@ -138,9 +141,16 @@ namespace MiniIT.Snipe.Editor
 			
 			mProcessing = false;
 			
-			SnipeToolsAutoUpdater.CheckUpdateAvailable();
+			SnipeToolsAutoUpdater.CheckUpdateAvailable(mInstalledPackages);
+			AdvertisingIdFetcherInstaller.CheckAndInstall(mInstalledPackages);
 		}
-		
+
+		private static void OnInstalledPackagesListFetched(PackageCollection installedPackages)
+		{
+			SnipeUpdater.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
+			mInstalledPackages = installedPackages;
+		}
+
 		internal static bool TryParseVersion(string version_string, out int[] version)
 		{
 			string[] version_code = version_string.Split('.');
