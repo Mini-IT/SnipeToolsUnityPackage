@@ -142,7 +142,9 @@ namespace MiniIT.Snipe.Editor
 			mProcessing = false;
 			
 			SnipeToolsAutoUpdater.CheckUpdateAvailable(mInstalledPackages);
+#if UNITY_2020_1_OR_NEWER
 			AdvertisingIdFetcherInstaller.CheckAndInstall(mInstalledPackages);
+#endif
 		}
 
 		private static void OnInstalledPackagesListFetched(PackageCollection installedPackages)
