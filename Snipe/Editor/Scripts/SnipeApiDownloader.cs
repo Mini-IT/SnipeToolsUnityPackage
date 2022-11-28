@@ -20,7 +20,6 @@ namespace MiniIT.Snipe.Editor
 
 		private string mDirectoryPath;
 		private string mSnipeVersionSuffix = "V6"; // SNIPE_VERSIONS[1]; //"V6";
-		private bool mGetTablesList = false;
 
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
@@ -96,8 +95,6 @@ namespace MiniIT.Snipe.Editor
 
 			EditorGUILayout.BeginHorizontal();
 			
-			mGetTablesList = EditorGUILayout.Toggle("Get tables list", mGetTablesList);
-			
 			// GUILayout.Label("Snipe Version", GUILayout.Width(EditorGUIUtility.labelWidth));
 
 			// int index = Array.IndexOf(SNIPE_VERSIONS, mSnipeVersionSuffix);
@@ -118,10 +115,6 @@ namespace MiniIT.Snipe.Editor
 		{
 			await DownloadSnipeApi();
 			await Task.Yield();
-			if (mGetTablesList)
-			{
-				SnipeTablesPreloader.DownloadTablesList();
-			}
 			AssetDatabase.Refresh();
 			this.Close();
 		}
