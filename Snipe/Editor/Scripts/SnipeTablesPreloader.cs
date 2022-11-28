@@ -76,6 +76,12 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 				Debug.Log($"[SnipeTablesPreloader] - DownloadTablesList FAILED - retry {retry}");
 				Task.Delay(1000).Wait();
 			}
+			else // no more reties
+			{
+#if UNITY_CLOUD_BUILD
+				throw new BuildFailedException("Failed to fetch tables list");
+#endif
+			}
 		}
 
 		if (mTableNames == null || mTableNames.Count == 0)
@@ -122,19 +128,24 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			}
 		}
 		
-		if (!string.IsNullOrWhiteSpace(mVersion))
+		if (string.IsNullOrWhiteSpace(mVersion))
 		{
-			foreach (string tablename in mTableNames)
+			Debug.LogError("[SnipeTablesPreloader] FAILED to fetch version");
+#if UNITY_CLOUD_BUILD
+			throw new BuildFailedException("Failed to fetch tables version");
+#endif
+		}	
+
+		foreach (string tablename in mTableNames)
+		{
+			Debug.Log($"[SnipeTablesPreloader] {tablename} - start loading");
+
+			if (!Task.Run(() => LoadTable(tablename)).Wait(180000))
 			{
-				Debug.Log($"[SnipeTablesPreloader] {tablename} - start loading");
-
-				if (!Task.Run(() => LoadTable(tablename)).Wait(180000))
-				{
-					Debug.LogWarning($"[SnipeTablesPreloader] Loading \"{tablename}\" FAILED by timeout");
-				}
-
-				Debug.Log($"[SnipeTablesPreloader] {tablename} - finish loading");
+				Debug.LogWarning($"[SnipeTablesPreloader] Loading \"{tablename}\" FAILED by timeout");
 			}
+
+			Debug.Log($"[SnipeTablesPreloader] {tablename} - finish loading");
 		}
 
 		Debug.Log("[SnipeTablesPreloader] Load - tables processing finished. Invoking AssetDatabase.Refresh");
@@ -197,9 +208,9 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 				try
 				{
 					client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-					var content = client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/tableTypes").Result;
+					var content = client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/tableFiles").Result;
 
-					// Debug.Log($"[SnipeTablesPreloader] {content}");
+					Debug.Log($"[SnipeTablesPreloader] {content}");
 
 					var list_wrapper = new TablesListResponseListWrapper();
 					UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, list_wrapper);
@@ -211,20 +222,12 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 						foreach (var item in list)
 						{
-							if (!item.isPublic)
-								continue;
-
 							string table_name = item.stringID;
 							if (!string.IsNullOrEmpty(table_name))
 							{
 								mTableNames.Add(table_name);
 							}
 						}
-
-						// common tables for all projects
-						mTableNames.Add("Items");
-						mTableNames.Add("Logic");
-						mTableNames.Add("Calendar");
 					}
 				}
 				catch (Exception e)
@@ -337,7 +340,9 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 				if (response != null && !response.IsSuccessStatusCode)
 				{
 					Debug.LogError($"[SnipeTablesPreloader] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
-					return;
+#if UNITY_CLOUD_BUILD
+					throw new BuildFailedException($"Failed to load table - {table_name}");
+#endif
 				}
 
 				string cache_path = GetTableFilePath(table_name);
@@ -356,6 +361,9 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 						catch (Exception ex)
 						{
 							Debug.LogError("[SnipeTablesPreloader] Failed to save - " + table_name + " - " + ex.ToString());
+#if UNITY_CLOUD_BUILD
+							throw new BuildFailedException($"Failed to save table - {table_name}");
+#endif
 						}
 					}
 				}
@@ -364,6 +372,9 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		catch (Exception e)
 		{
 			Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name + " - " + e.ToString());
+#if UNITY_CLOUD_BUILD
+			throw new BuildFailedException($"Failed to load table - {table_name}");
+#endif
 		}
 	}
 
@@ -376,9 +387,8 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	[System.Serializable]
 	internal class TablesListResponseListItem
 	{
-		public int id;
 		public string stringID;
-		public bool isPublic;
+		public string name;
 	}
 
 	[System.Serializable]
