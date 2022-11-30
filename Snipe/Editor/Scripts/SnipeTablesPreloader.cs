@@ -74,7 +74,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			if (retry < LOADING_RETIES_COUNT - 1)
 			{
 				Debug.Log($"[SnipeTablesPreloader] - DownloadTablesList FAILED - retry {retry}");
-				Task.Delay(1000).Wait();
+				Task.Delay(1000 * (retry + 1)).Wait();
 			}
 			else // no more reties
 			{
@@ -124,7 +124,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			if (retry < LOADING_RETIES_COUNT - 1)
 			{
 				Debug.Log($"[SnipeTablesPreloader] - LoadVersion FAILED - retry {retry}");
-				Task.Delay(1000).Wait();
+				Task.Delay(1000 * (retry + 1)).Wait();
 			}
 		}
 		
