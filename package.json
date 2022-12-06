@@ -14,6 +14,6 @@
     "Client"
   ], 
   "description": "Editor utilities for Snipe", 
-  "version": "1.1.6",
+  "version": "1.2.0",
   "name": "com.miniit.snipe.tools"
 }
