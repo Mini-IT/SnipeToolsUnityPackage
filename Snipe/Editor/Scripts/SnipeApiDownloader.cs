@@ -1,9 +1,7 @@
 ﻿#if UNITY_EDITOR
 
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Text.RegularExpressions;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -24,9 +22,12 @@ namespace MiniIT.Snipe.Editor
 			Service,
 		}
 
+		private const string STATIC_FILE_NAME = "SnipeApi.cs";
+		private const string SERVICE_FILE_NAME = "SnipeApiService.cs";
+
 		private string _directoryPath;
 		private string _snipeVersionSuffix = "V6"; // SNIPE_VERSIONS[1]; //"V6";
-		private SnipeApiVariation _variation = SnipeApiVariation.StaticClass;
+		private SnipeApiVariation _variation = SnipeApiVariation.Service;
 
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
@@ -50,13 +51,13 @@ namespace MiniIT.Snipe.Editor
 			if (results != null && results.Length > 0)
 			{
 				string path = AssetDatabase.GUIDToAssetPath(results[0]);
-				if (path.EndsWith("SnipeApi.cs"))
+				if (path.EndsWith(STATIC_FILE_NAME))
 				{
 					// Application.dataPath ends with "Assets"
 					// path starts with "Assets" and ends with "SnipeApi.cs"
 					_directoryPath = Application.dataPath + path.Substring(6, path.Length - 17);
 				}
-				else if (path.EndsWith("SnipeApiService.cs"))
+				else if (path.EndsWith(SERVICE_FILE_NAME))
 				{
 					// Application.dataPath ends with "Assets"
 					// path starts with "Assets" and ends with "SnipeApiService.cs"
@@ -101,7 +102,7 @@ namespace MiniIT.Snipe.Editor
 			_directoryPath = EditorGUILayout.TextField("Directory", _directoryPath);
 			if (GUILayout.Button("...", GUILayout.Width(40)))
 			{
-				string filename = (_variation == SnipeApiVariation.Service) ? "SnipeApiService.cs" : "SnipeApi.cs";
+				string filename = (_variation == SnipeApiVariation.Service) ? SERVICE_FILE_NAME : STATIC_FILE_NAME;
 				string path = EditorUtility.SaveFolderPanel($"Choose location of {filename}", _directoryPath, "");
 				if (!string.IsNullOrEmpty(path))
 				{
@@ -170,11 +171,53 @@ namespace MiniIT.Snipe.Editor
 					return;
 				}
 				
-				string filename = (_variation == SnipeApiVariation.Service) ? "SnipeApiService.cs" : "SnipeApi.cs";
+				string filename = (_variation == SnipeApiVariation.Service) ? SERVICE_FILE_NAME : STATIC_FILE_NAME;
+				string filePath = Path.Combine(_directoryPath, filename);
 
-				using (StreamWriter sw = File.CreateText(Path.Combine(_directoryPath, filename)))
+				using (StreamWriter sw = File.CreateText(filePath))
 				{
 					await response.Content.CopyToAsync(sw.BaseStream);
+				}
+
+				if (_variation == SnipeApiVariation.Service)
+				{
+					string staticSnipeApiPath = Path.Combine(_directoryPath, STATIC_FILE_NAME);
+					if (File.Exists(staticSnipeApiPath))
+					{
+						File.Delete(staticSnipeApiPath);
+						using (StreamWriter sw = File.CreateText(staticSnipeApiPath))
+						{
+							sw.WriteLine("using MiniIT.Snipe.Api;");
+							sw.WriteLine("namespace MiniIT.Snipe");
+							sw.WriteLine("{");
+							sw.WriteLine("\tpublic static class SnipeApi");
+							sw.WriteLine("\t{");
+							sw.WriteLine("\t\tpublic static SnipeApiService Service { get; } = new SnipeApiService();");
+							sw.WriteLine("\t\tpublic static SnipeTables Tables => Service.Tables;");
+							sw.WriteLine("\t\tpublic static LogicManager LogicManager => Service.LogicManager;");
+							sw.WriteLine("\t\tpublic static CalendarManager CalendarManager => Service.CalendarManager;");
+
+							string content = await response.Content.ReadAsStringAsync();
+							string patternBefore = @"public\sSnipeApiModule\w*\s";
+							string patternAfter = @"\s?{\s?get;";
+							var regex = new Regex(patternBefore + @"\w*" + patternAfter);
+							var regexBefore = new Regex(patternBefore);
+							var regexAfter = new Regex(patternAfter);
+							var matches = regex.Matches(content);
+							foreach (var match in matches ) 
+							{
+								string module = regexBefore.Replace(regexAfter.Replace(match.ToString(), string.Empty), string.Empty);
+								if (string.IsNullOrEmpty(module))
+									continue;
+
+								sw.WriteLine($"\t\tpublic static SnipeApiModule{module} {module} => Service.{module};");
+							}
+
+							sw.WriteLine("\t\tpublic static void Initialize() => _ = Service;");
+							sw.WriteLine("\t}");
+							sw.WriteLine("}");
+						}
+					}
 				}
 			}
 
