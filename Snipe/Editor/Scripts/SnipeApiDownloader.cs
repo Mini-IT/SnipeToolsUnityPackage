@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 
+using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Net.Http;
@@ -25,6 +26,8 @@ namespace MiniIT.Snipe.Editor
 		private const string STATIC_FILE_NAME = "SnipeApi.cs";
 		private const string SERVICE_FILE_NAME = "SnipeApiService.cs";
 
+		private const string PREFS_API_VARIATION = "SnipeApiVariarion";
+
 		private string _directoryPath;
 		private string _snipeVersionSuffix = "V6"; // SNIPE_VERSIONS[1]; //"V6";
 		private SnipeApiVariation _variation = SnipeApiVariation.Service;
@@ -38,6 +41,15 @@ namespace MiniIT.Snipe.Editor
 		protected void OnEnable()
 		{
 			SnipeAuthKey.Load();
+
+			try
+			{
+				_variation = (SnipeApiVariation)EditorPrefs.GetInt(PREFS_API_VARIATION, (int)SnipeApiVariation.Service);
+			}
+			catch (Exception)
+			{
+				_variation = SnipeApiVariation.Service;
+			}
 
 			FindSnipeApiDirectory();
 			
@@ -126,6 +138,7 @@ namespace MiniIT.Snipe.Editor
 			if (selectedVariation != serviceVariation)
 			{
 				_variation = selectedVariation ? SnipeApiVariation.Service : SnipeApiVariation.StaticClass;
+				EditorPrefs.SetInt(PREFS_API_VARIATION, (int)_variation);
 			}
 
 			GUILayout.FlexibleSpace();
