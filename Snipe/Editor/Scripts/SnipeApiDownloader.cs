@@ -30,7 +30,7 @@ namespace MiniIT.Snipe.Editor
 
 		private string _directoryPath;
 		private string _snipeVersionSuffix = "V6"; // SNIPE_VERSIONS[1]; //"V6";
-		private SnipeApiVariation _variation = SnipeApiVariation.Service;
+		private SnipeApiVariation _variation = SnipeApiVariation.StaticClass;
 
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
@@ -44,11 +44,11 @@ namespace MiniIT.Snipe.Editor
 
 			try
 			{
-				_variation = (SnipeApiVariation)EditorPrefs.GetInt(PREFS_API_VARIATION, (int)SnipeApiVariation.Service);
+				_variation = (SnipeApiVariation)EditorPrefs.GetInt(PREFS_API_VARIATION, (int)SnipeApiVariation.StaticClass);
 			}
 			catch (Exception)
 			{
-				_variation = SnipeApiVariation.Service;
+				_variation = SnipeApiVariation.StaticClass;
 			}
 
 			FindSnipeApiDirectory();
