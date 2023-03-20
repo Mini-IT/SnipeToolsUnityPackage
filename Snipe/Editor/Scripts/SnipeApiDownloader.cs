@@ -124,7 +124,9 @@ namespace MiniIT.Snipe.Editor
 			GUILayout.EndHorizontal();
 			
 			EditorGUILayout.Space();
-
+			
+			EditorGUILayout.HelpBox("Snipe Client package v.5+ only", MessageType.Warning);
+			
 			EditorGUILayout.BeginHorizontal();
 			
 			// GUILayout.Label("Snipe Version", GUILayout.Width(EditorGUIUtility.labelWidth));
@@ -140,6 +142,10 @@ namespace MiniIT.Snipe.Editor
 				_variation = selectedVariation ? SnipeApiVariation.Service : SnipeApiVariation.StaticClass;
 				EditorPrefs.SetInt(PREFS_API_VARIATION, (int)_variation);
 			}
+			
+			EditorGUILayout.EndHorizontal();
+			
+			EditorGUILayout.BeginHorizontal();
 
 			GUILayout.FlexibleSpace();
 
