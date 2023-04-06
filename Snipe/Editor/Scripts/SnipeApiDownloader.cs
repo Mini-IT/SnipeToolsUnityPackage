@@ -211,7 +211,7 @@ namespace MiniIT.Snipe.Editor
 							sw.WriteLine("{");
 							sw.WriteLine("\tpublic static class SnipeApi");
 							sw.WriteLine("\t{");
-							sw.WriteLine("\t\tpublic static SnipeApiService Service { get; } = new SnipeApiService();");
+							sw.WriteLine("\t\tpublic static SnipeApiService Service { get; private set; }");
 							sw.WriteLine("\t\tpublic static SnipeTables Tables => Service.Tables;");
 							sw.WriteLine("\t\tpublic static LogicManager LogicManager => Service.LogicManager;");
 							sw.WriteLine("\t\tpublic static CalendarManager CalendarManager => Service.CalendarManager;");
@@ -232,7 +232,7 @@ namespace MiniIT.Snipe.Editor
 								sw.WriteLine($"\t\tpublic static SnipeApiModule{module} {module} => Service.{module};");
 							}
 
-							sw.WriteLine("\t\tpublic static void Initialize() => _ = Service;");
+							sw.WriteLine("\t\tpublic static void Initialize() => Service = SnipeContext.Default.GetApi();");
 							sw.WriteLine("\t}");
 							sw.WriteLine("}");
 						}
