@@ -211,10 +211,16 @@ namespace MiniIT.Snipe.Editor
 							sw.WriteLine("{");
 							sw.WriteLine("\tpublic static class SnipeApi");
 							sw.WriteLine("\t{");
-							sw.WriteLine("\t\tpublic static SnipeApiService Service { get; private set; }");
-							sw.WriteLine("\t\tpublic static SnipeTables Tables => Service.Tables;");
-							sw.WriteLine("\t\tpublic static LogicManager LogicManager => Service.LogicManager;");
-							sw.WriteLine("\t\tpublic static CalendarManager CalendarManager => Service.CalendarManager;");
+							sw.WriteLine("\t\tprivate static SnipeApiContext _context;");
+							sw.WriteLine("\t\tpublic static SnipeApiContext Context");
+							sw.WriteLine("\t\t{");
+							sw.WriteLine("\t\t\tget");
+							sw.WriteLine("\t\t\t{");
+							sw.WriteLine("\t\t\t\t_context ??= SnipeApiContext.Default;");
+							sw.WriteLine("\t\t\t\treturn _context;");
+							sw.WriteLine("\t\t\t}");
+							sw.WriteLine("\t\t}");
+							sw.WriteLine("\t\tpublic static SnipeApiService Service => Context.Api;");
 
 							string content = await response.Content.ReadAsStringAsync();
 							string patternBefore = @"public\sSnipeApiModule\w*\s";
@@ -232,7 +238,6 @@ namespace MiniIT.Snipe.Editor
 								sw.WriteLine($"\t\tpublic static SnipeApiModule{module} {module} => Service.{module};");
 							}
 
-							sw.WriteLine("\t\tpublic static void Initialize() => Service = SnipeContext.Default.GetApi();");
 							sw.WriteLine("\t}");
 							sw.WriteLine("}");
 						}
