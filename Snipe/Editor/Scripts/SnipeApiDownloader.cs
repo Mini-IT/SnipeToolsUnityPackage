@@ -211,15 +211,7 @@ namespace MiniIT.Snipe.Editor
 							sw.WriteLine("{");
 							sw.WriteLine("\tpublic static class SnipeApi");
 							sw.WriteLine("\t{");
-							sw.WriteLine("\t\tprivate static SnipeApiContext _context;");
-							sw.WriteLine("\t\tpublic static SnipeApiContext Context");
-							sw.WriteLine("\t\t{");
-							sw.WriteLine("\t\t\tget");
-							sw.WriteLine("\t\t\t{");
-							sw.WriteLine("\t\t\t\t_context ??= SnipeApiContext.Default;");
-							sw.WriteLine("\t\t\t\treturn _context;");
-							sw.WriteLine("\t\t\t}");
-							sw.WriteLine("\t\t}");
+							sw.WriteLine("\t\tpublic static SnipeApiContext Context => SnipeApiContext.Default;");
 							sw.WriteLine("\t\tpublic static SnipeApiService Service => Context.Api;");
 
 							string content = await response.Content.ReadAsStringAsync();
