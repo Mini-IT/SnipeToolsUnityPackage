@@ -24,7 +24,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	public void OnPreprocessBuild(BuildReport report)
 	{
 		Debug.Log("[SnipeTablesPreloader] OnPreprocessBuild - started");
-		
+
 		Load();
 		
 		Debug.Log("[SnipeTablesPreloader] OnPreprocessBuild - finished");
@@ -64,13 +64,21 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	[MenuItem ("Snipe/Preload Tables")]
 	public static void Load()
 	{
+		using (var client = new HttpClient())
+		{
+			Load(client);
+		}
+	}
+
+	private static void Load(HttpClient httpClient)
+	{
 		Debug.Log("[SnipeTablesPreloader] Load - started");
 		
 		mStreamingAssetsPath = Application.streamingAssetsPath;
 
 		for (int retry = 0; retry < LOADING_RETIES_COUNT; retry++)
 		{
-			if (DownloadTablesList())
+			if (DownloadTablesList(httpClient))
 			{
 				break;
 			}
@@ -118,7 +126,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		{
 			Debug.Log($"[SnipeTablesPreloader] {tablename} - start loading");
 
-			if (!Task.Run(() => LoadTable(tablename)).Wait(180000))
+			if (!Task.Run(() => LoadTable(httpClient, tablename)).Wait(180000))
 			{
 				Debug.LogWarning($"[SnipeTablesPreloader] Loading \"{tablename}\" FAILED by timeout");
 			}
@@ -133,12 +141,14 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		Debug.Log("[SnipeTablesPreloader] Load - done");
 	}
 
-	public static bool DownloadTablesList()
+	public static bool DownloadTablesList(HttpClient httpClient)
 	{
 		Debug.Log("[SnipeTablesPreloader] DownloadTablesList - start");
 
 		if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+		{
 			SnipeAuthKey.Load();
+		}
 		if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
 		{
 			Debug.Log("[SnipeTablesPreloader] - FAILED - invalid AuthKey");
@@ -153,26 +163,23 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		{
 			Debug.Log($"[SnipeTablesPreloader] Fetching projects list");
 
-			using (var project_string_id_client = new HttpClient())
+			try
 			{
-				try
-				{
-					project_string_id_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-					var content = project_string_id_client.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/stringID").Result;
+				httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
+				var content = httpClient.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/stringID").Result;
 
-					Debug.Log($"[SnipeTablesPreloader] {content}");
+				Debug.Log($"[SnipeTablesPreloader] {content}");
 
-					var response_data = new ProjectStringIdResponseData();
-					UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response_data);
-					project_string_id = response_data.stringID;
-					Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {response_data.errorCode}");
-					Debug.Log($"[SnipeTablesPreloader] Project StringID = {project_string_id}");
-				}
-				catch (Exception e)
-				{
-					Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch projects list: {e}");
-					return false;
-				}
+				var response_data = new ProjectStringIdResponseData();
+				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response_data);
+				project_string_id = response_data.stringID;
+				Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {response_data.errorCode}");
+				Debug.Log($"[SnipeTablesPreloader] Project StringID = {project_string_id}");
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch projects list: {e}");
+				return false;
 			}
 
 			Debug.Log($"[SnipeTablesPreloader] Fetching tables list for project {project_string_id}");
@@ -181,22 +188,25 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			
 			Debug.Log($"[SnipeTablesPreloader] TablesUrl = {mTablesUrl}");
 
-			using (var client = new HttpClient())
+			try
 			{
-				try
-				{
-					string url = GetVersionsUrl();
-					var content = client.GetStringAsync(url).Result;
+				string url = GetVersionsUrl();
+				var content = httpClient.GetStringAsync(url).Result;
 
-					Debug.Log($"[SnipeTablesPreloader] {content}");
-
-					ParseVersions(content);
-				}
-				catch (Exception e)
+				Debug.Log($"[SnipeTablesPreloader] {content}");
+				
+				using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
 				{
-					Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch tables list: {e}");
-					return false;
+					string path = Path.Combine(mStreamingAssetsPath, "snipe_tables.json");
+					SaveToCache(stream, path);
 				}
+
+				ParseVersions(content);
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch tables list: {e}");
+				return false;
 			}
 		}
 
@@ -224,7 +234,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		}
 	}
 
-	protected static async Task LoadTable(string table_name)
+	protected static async Task LoadTable(HttpClient httpClient, string table_name)
 	{
 		if (!mVersions.TryGetValue(table_name, out string version))
 		{
@@ -238,76 +248,57 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		
 		try
 		{
-			using (var loader = new HttpClient())
+			HttpResponseMessage response = null;
+			for (int retry = 0; retry < LOADING_RETIES_COUNT; retry++)
 			{
-				HttpResponseMessage response = null;
-				for (int retry = 0; retry < LOADING_RETIES_COUNT; retry++)
+				try
 				{
-					try
+					var loader_task = httpClient.GetAsync(url);
+
+					await loader_task;
+
+					if (loader_task.IsFaulted || loader_task.IsCanceled || !loader_task.Result.IsSuccessStatusCode)
 					{
-						var loader_task = loader.GetAsync(url);
-
-						await loader_task;
-
-						if (loader_task.IsFaulted || loader_task.IsCanceled || !loader_task.Result.IsSuccessStatusCode)
-						{
-							Debug.LogError($"[SnipeTablesPreloader] Failed to load table - {table_name}   (loader failed) - StatusCode: {loader_task.Result.StatusCode}");
-						}
+						Debug.LogError($"[SnipeTablesPreloader] Failed to load table - {table_name}   (loader failed) - StatusCode: {loader_task.Result.StatusCode}");
+					}
 						
-						response = loader_task.Result;
-					}
-					catch (Exception loader_ex)
-					{
-						Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name + " - loader exception: " + loader_ex.ToString());
-					}
+					response = loader_task.Result;
+				}
+				catch (Exception loader_ex)
+				{
+					Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name + " - loader exception: " + loader_ex.ToString());
+				}
 
-					if (response != null)
-					{
-						Debug.Log($"[SnipeTablesPreloader] StatusCode: {response.StatusCode}");
+				if (response != null)
+				{
+					Debug.Log($"[SnipeTablesPreloader] StatusCode: {response.StatusCode}");
 						
-						if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
-						{
-							break;
-						}
-					}
-
-					if (retry < LOADING_RETIES_COUNT - 1)
+					if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
 					{
-						Debug.Log($"[SnipeTablesPreloader] Failed to load table - {table_name}   (loader failed) - rety {retry}");
-						await Task.Delay(3000 * (retry + 1));
+						break;
 					}
 				}
 
-				if (response != null && !response.IsSuccessStatusCode)
+				if (retry < LOADING_RETIES_COUNT - 1)
 				{
-					Debug.LogError($"[SnipeTablesPreloader] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
-#if UNITY_CLOUD_BUILD
-					throw new BuildFailedException($"Failed to load table - {table_name}");
-#endif
+					Debug.Log($"[SnipeTablesPreloader] Failed to load table - {table_name}   (loader failed) - rety {retry}");
+					await Task.Delay(3000 * (retry + 1));
 				}
+			}
 
-				string cache_path = GetTableFilePath(table_name, version);
-
-				using (var file_content_stream = await response.Content.ReadAsStreamAsync())
-				{
-					using (FileStream cache_write_stream = new FileStream(cache_path, FileMode.Create, FileAccess.Write))
-					{
-						try
-						{
-							file_content_stream.Position = 0;
-							file_content_stream.CopyTo(cache_write_stream);
-
-							Debug.Log("[SnipeTablesPreloader] Table saved: " + cache_path);
-						}
-						catch (Exception ex)
-						{
-							Debug.LogError("[SnipeTablesPreloader] Failed to save - " + table_name + " - " + ex.ToString());
+			if (response != null && !response.IsSuccessStatusCode)
+			{
+				Debug.LogError($"[SnipeTablesPreloader] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
 #if UNITY_CLOUD_BUILD
-							throw new BuildFailedException($"Failed to save table - {table_name}");
+				throw new BuildFailedException($"Failed to load table - {table_name}");
 #endif
-						}
-					}
-				}
+			}
+
+			string cache_path = GetTableFilePath(table_name, version);
+
+			using (var file_content_stream = await response.Content.ReadAsStreamAsync())
+			{
+				SaveToCache(file_content_stream, cache_path);
 			}
 		}
 		catch (Exception e)
@@ -316,6 +307,30 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 #if UNITY_CLOUD_BUILD
 			throw new BuildFailedException($"Failed to load table - {table_name}");
 #endif
+		}
+	}
+
+	private static void SaveToCache(Stream content, string cache_path)
+	{
+		using (FileStream cache_write_stream = new FileStream(cache_path, FileMode.Create, FileAccess.Write))
+		{
+			try
+			{
+				if (content.CanSeek)
+				{
+					content.Position = 0;
+				}
+				content.CopyTo(cache_write_stream);
+
+				Debug.Log("[SnipeTablesPreloader] Saved: " + cache_path);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError("[SnipeTablesPreloader] Failed to save - " + cache_path + " - " + ex.ToString());
+#if UNITY_CLOUD_BUILD
+				throw new BuildFailedException($"Failed to save table - {table_name}");
+#endif
+			}
 		}
 	}
 
