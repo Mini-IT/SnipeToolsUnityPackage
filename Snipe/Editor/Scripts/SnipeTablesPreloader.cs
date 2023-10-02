@@ -328,7 +328,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			{
 				Debug.LogError("[SnipeTablesPreloader] Failed to save - " + cache_path + " - " + ex.ToString());
 #if UNITY_CLOUD_BUILD
-				throw new BuildFailedException($"Failed to save table - {table_name}");
+				throw new BuildFailedException($"Failed to save table - {cache_path}");
 #endif
 			}
 		}
