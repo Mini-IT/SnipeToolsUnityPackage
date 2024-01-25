@@ -50,9 +50,11 @@ namespace MiniIT.Snipe.Editor
 			}
 
 			FindSnipeApiDirectory();
-			
+
 			if (SnipeAutoUpdater.AutoUpdateEnabled)
+			{
 				SnipeAutoUpdater.CheckUpdateAvailable();
+			}
 		}
 		
 		private void FindSnipeApiDirectory()
@@ -181,7 +183,9 @@ namespace MiniIT.Snipe.Editor
 				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
 				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/code/unityBindings{_snipeVersionSuffix}";
 				if (_variation == SnipeApiVariation.Service)
+				{
 					url += "1";
+				}
 				
 				var response = await loader.GetAsync(url);
 
