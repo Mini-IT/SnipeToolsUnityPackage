@@ -65,7 +65,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			
 			EditorGUIUtility.labelWidth = 100;
 			
-			string projectStringID = EditorGUILayout.TextField("Project string ID", _projectStringID).Trim();
+			string projectStringID = EditorGUILayout.TextField("Project String ID", _projectStringID).Trim();
 			if (projectStringID != _projectStringID)
 			{
 				_projectStringID = projectStringID;
