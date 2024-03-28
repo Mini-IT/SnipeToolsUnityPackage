@@ -1,29 +1,33 @@
 ﻿#if UNITY_EDITOR && SNIPE_6_1
 
-using MiniIT.Snipe.Unity.Editor;
-using System;
 using System.IO;
-using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+
 using Debug = UnityEngine.Debug;
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 	public class SnipeConfigDownloader : EditorWindow
 	{
 		private const string SA_FILE_NAME = "_snipe_config.json";
 		private const string PREFS_PROPJECT_STRING_ID = "SnipeProjectStringID";
-		private const string URL = "https://config.snipe.dev/api/v1/config";
+
+		public enum SubPlatform
+		{
+			None,
+			Amazon,
+			RuStore,
+			Nutaku,
+		}
 
 		private MockApplicationInfo _appInfo;
 		private string _projectStringID;
+		private string _filePath;
 		private RuntimePlatform _platform;
-		private bool _dev;
-		private bool _amazon;
+		private SubPlatform _subplatform;
+		private string _content;
 
 		[MenuItem("Snipe/Config...")]
 		public static void ShowWindow()
@@ -34,9 +38,17 @@ namespace MiniIT.Snipe.Editor
 		protected void OnEnable()
 		{
 			_projectStringID = EditorPrefs.GetString(PREFS_PROPJECT_STRING_ID);
+			_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILE_NAME);
 
 			_platform = Application.platform;
 			_appInfo = new MockApplicationInfo();
+
+			ReadConfigFile();
+		}
+
+		private async void ReadConfigFile()
+		{
+			_content = await File.ReadAllTextAsync(_filePath);
 		}
 
 		private void OnGUI()
@@ -54,24 +66,26 @@ namespace MiniIT.Snipe.Editor
 			
 			EditorGUILayout.Space();
 
-			_dev = EditorGUILayout.Toggle("Dev", _dev);
-
 			_appInfo.ApplicationIdentifier = EditorGUILayout.TextField("App Identifier", _appInfo.ApplicationIdentifier);
 			_appInfo.ApplicationVersion = EditorGUILayout.TextField("App Version", _appInfo.ApplicationVersion);
 
-			_platform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _platform);
-			if (_platform.ToString() != _appInfo.ApplicationPlatform)
-			{
-				_appInfo.ApplicationPlatform = _platform.ToString();
-			}
+			var platform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _platform);
+			var subplatform = _subplatform;
 
-			if (_platform == RuntimePlatform.Android)
+			if (_platform == RuntimePlatform.Android || _platform == RuntimePlatform.WebGLPlayer)
 			{
-				_amazon = EditorGUILayout.Toggle("Amazon", _amazon);
+				subplatform = (SubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _subplatform);
 			}
 			else
 			{
-				_amazon = false;
+				subplatform = SubPlatform.None;
+			}
+
+			if (_platform != platform || _subplatform != subplatform)
+			{
+				_platform = platform;
+				_subplatform = subplatform;
+				_appInfo.ApplicationPlatform = $"{_platform}{SubPlaftomToString(_subplatform)}";
 			}
 
 			EditorGUILayout.Space();
@@ -79,35 +93,58 @@ namespace MiniIT.Snipe.Editor
 			EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(_projectStringID));
 			EditorGUILayout.BeginHorizontal();
 
+			EditorGUI.BeginDisabledGroup(true);
+			GUILayout.Label(_appInfo.ApplicationPlatform);
+			EditorGUI.EndDisabledGroup();
+
 			GUILayout.FlexibleSpace();
 
 			if (GUILayout.Button("Download"))
 			{
-				DownloadConfigAndClose();
+				OnDownloadButtonPressed();
 			}
 			EditorGUILayout.EndHorizontal();
 			EditorGUI.EndDisabledGroup();
+
+			GUILayout.TextArea(_content);
 		}
 
-		private async void DownloadConfigAndClose()
+		private string SubPlaftomToString(SubPlatform subPlatform)
+		{
+			return subPlatform != SubPlatform.None ? subPlatform.ToString() : string.Empty;
+		}
+
+		private async void OnDownloadButtonPressed()
 		{
 			string json = await DownloadConfig();
+			if (string.IsNullOrEmpty(json))
+			{
+				Debug.LogError("Config fetching error. Invalid JSON");
+				return;
+			}
 
-			string filePath = Path.Combine(Application.streamingAssetsPath, SA_FILE_NAME);
-			await File.WriteAllTextAsync(filePath, json);
+			_content = json;
+
+			await File.WriteAllTextAsync(_filePath, json);
 		}
 
 		private async Task<string> DownloadConfig()
 		{
 			Debug.Log("DownloadConfig - start");
 
-			if (string.IsNullOrWhiteSpace( _projectStringID) )
+			if (string.IsNullOrWhiteSpace(_projectStringID))
 			{
 				return null;
 			}
 
 			var loader = new SnipeConfigLoader(_projectStringID, _appInfo);
 			var config = await loader.Load();
+			if (config == null)
+			{
+				Debug.LogError("DownloadConfig - null");
+				return null;
+			}
+
 			string json = fastJSON.JSON.ToJSON(config);
 
 			Debug.Log(json);

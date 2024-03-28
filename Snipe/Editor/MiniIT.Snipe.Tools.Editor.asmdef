@@ -4,7 +4,8 @@
         "MiniIT.Snipe.Config",
         "MiniIT.Snipe.Unity",
         "MiniIT.Snipe.Services",
-        "fastJSON"
+        "fastJSON",
+        "UniTask"
     ],
     "includePlatforms": [
         "Editor"
