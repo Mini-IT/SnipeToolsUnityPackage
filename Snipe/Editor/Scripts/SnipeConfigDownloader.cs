@@ -14,11 +14,17 @@ namespace MiniIT.Snipe.Unity.Editor
 		private const string SA_FILE_NAME = "_snipe_config.json";
 		private const string PREFS_PROPJECT_STRING_ID = "SnipeProjectStringID";
 
-		public enum SubPlatform
+		public enum AndriodSubPlatform
 		{
-			None,
+			GooglePlay,
 			Amazon,
 			RuStore,
+			Nutaku,
+		}
+
+		public enum WebGLSubPlatform
+		{
+			None,
 			Nutaku,
 		}
 
@@ -26,7 +32,8 @@ namespace MiniIT.Snipe.Unity.Editor
 		private string _projectStringID;
 		private string _filePath;
 		private RuntimePlatform _platform;
-		private SubPlatform _subplatform;
+		private AndriodSubPlatform _androidSubplatform;
+		private WebGLSubPlatform _webglSubplatform;
 		private string _content;
 
 		[MenuItem("Snipe/Config...")]
@@ -42,6 +49,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			_platform = Application.platform;
 			_appInfo = new MockApplicationInfo();
+			
 
 			ReadConfigFile();
 		}
@@ -70,22 +78,31 @@ namespace MiniIT.Snipe.Unity.Editor
 			_appInfo.ApplicationVersion = EditorGUILayout.TextField("App Version", _appInfo.ApplicationVersion);
 
 			var platform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _platform);
-			var subplatform = _subplatform;
+			var androidSubplatform = _androidSubplatform;
+			var webglSubplatform = _webglSubplatform;
 
-			if (_platform == RuntimePlatform.Android || _platform == RuntimePlatform.WebGLPlayer)
+			if (platform == RuntimePlatform.Android)
 			{
-				subplatform = (SubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _subplatform);
+				androidSubplatform = (AndriodSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _androidSubplatform);
+				webglSubplatform = WebGLSubPlatform.None;
+			}
+			else if (platform == RuntimePlatform.WebGLPlayer)
+			{
+				androidSubplatform = AndriodSubPlatform.GooglePlay;
+				webglSubplatform = (WebGLSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _webglSubplatform);
 			}
 			else
 			{
-				subplatform = SubPlatform.None;
+				androidSubplatform = AndriodSubPlatform.GooglePlay;
+				webglSubplatform = WebGLSubPlatform.None;
 			}
 
-			if (_platform != platform || _subplatform != subplatform)
+			if (_platform != platform || _androidSubplatform != androidSubplatform || _webglSubplatform != webglSubplatform)
 			{
 				_platform = platform;
-				_subplatform = subplatform;
-				_appInfo.ApplicationPlatform = $"{_platform}{SubPlaftomToString(_subplatform)}";
+				_androidSubplatform = androidSubplatform;
+				_webglSubplatform = webglSubplatform;
+				_appInfo.ApplicationPlatform = GetPlaftomString();
 			}
 
 			EditorGUILayout.Space();
@@ -109,9 +126,21 @@ namespace MiniIT.Snipe.Unity.Editor
 			GUILayout.TextArea(_content);
 		}
 
-		private string SubPlaftomToString(SubPlatform subPlatform)
+		private string GetPlaftomString()
 		{
-			return subPlatform != SubPlatform.None ? subPlatform.ToString() : string.Empty;
+			if (_platform == RuntimePlatform.Android)
+			{
+				string subPlatform = _androidSubplatform != AndriodSubPlatform.GooglePlay ? _androidSubplatform.ToString() : string.Empty;
+				return $"{_platform}{subPlatform}";
+			}
+			
+			if (_platform == RuntimePlatform.WebGLPlayer)
+			{
+				string subPlatform = _webglSubplatform != WebGLSubPlatform.None ? _webglSubplatform.ToString() : string.Empty;
+				return $"{_platform}{subPlatform}";
+			}
+
+			return $"{_platform}";
 		}
 
 		private async void OnDownloadButtonPressed()
