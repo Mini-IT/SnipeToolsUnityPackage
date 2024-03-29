@@ -11,7 +11,7 @@ namespace MiniIT.Snipe.Unity.Editor
 {
 	public class SnipeConfigDownloader : EditorWindow
 	{
-		private const string SA_FILE_NAME = "_snipe_config.json";
+		private const string SA_FILENAME = "remote_config_defaults.json";
 		private const string PREFS_PROPJECT_STRING_ID = "SnipeProjectStringID";
 
 		public enum AndriodSubPlatform
@@ -45,18 +45,24 @@ namespace MiniIT.Snipe.Unity.Editor
 		protected void OnEnable()
 		{
 			_projectStringID = EditorPrefs.GetString(PREFS_PROPJECT_STRING_ID);
-			_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILE_NAME);
+			_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILENAME);
 
 			_platform = Application.platform;
 			_appInfo = new MockApplicationInfo();
 			
-
 			ReadConfigFile();
 		}
 
 		private async void ReadConfigFile()
 		{
-			_content = await File.ReadAllTextAsync(_filePath);
+			try
+			{
+				_content = await File.ReadAllTextAsync(_filePath);
+			}
+			catch (System.Exception)
+			{
+				_content = string.Empty;
+			}
 		}
 
 		private void OnGUI()
