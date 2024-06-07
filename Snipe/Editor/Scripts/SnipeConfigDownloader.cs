@@ -44,13 +44,18 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		protected void OnEnable()
 		{
-			_projectStringID = EditorPrefs.GetString(PREFS_PROPJECT_STRING_ID);
+			_projectStringID = EditorPrefs.GetString(GetProjectStringIdKey());
 			_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILENAME);
 
 			_platform = Application.platform;
 			_appInfo = new MockApplicationInfo();
-			
+
 			ReadConfigFile();
+		}
+
+		private static string GetProjectStringIdKey()
+		{
+			return $"{Application.identifier}.{PREFS_PROPJECT_STRING_ID}";
 		}
 
 		private async void ReadConfigFile()
@@ -74,8 +79,17 @@ namespace MiniIT.Snipe.Unity.Editor
 			string projectStringID = EditorGUILayout.TextField("Project String ID", _projectStringID).Trim();
 			if (projectStringID != _projectStringID)
 			{
+				if (projectStringID.EndsWith("_dev"))
+				{
+					projectStringID = projectStringID.Substring(0, projectStringID.Length - 4);
+				}
+				else if (projectStringID.EndsWith("_live"))
+				{
+					projectStringID = projectStringID.Substring(0, projectStringID.Length - 5);
+				}
+
 				_projectStringID = projectStringID;
-				EditorPrefs.SetString(PREFS_PROPJECT_STRING_ID, _projectStringID);
+				EditorPrefs.SetString(GetProjectStringIdKey(), _projectStringID);
 			}
 			
 			EditorGUILayout.Space();
