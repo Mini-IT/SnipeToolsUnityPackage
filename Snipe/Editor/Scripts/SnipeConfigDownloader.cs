@@ -1,29 +1,40 @@
 ﻿#if UNITY_EDITOR && SNIPE_6_1
 
-using MiniIT.Snipe.Unity.Editor;
-using System;
 using System.IO;
-using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+
 using Debug = UnityEngine.Debug;
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 	public class SnipeConfigDownloader : EditorWindow
 	{
-		private const string SA_FILE_NAME = "_snipe_config.json";
+		private const string SA_FILENAME = "remote_config_defaults.json";
 		private const string PREFS_PROPJECT_STRING_ID = "SnipeProjectStringID";
-		private const string URL = "https://config.snipe.dev/api/v1/config";
+
+		public enum AndriodSubPlatform
+		{
+			GooglePlay,
+			Amazon,
+			RuStore,
+			Nutaku,
+		}
+
+		public enum WebGLSubPlatform
+		{
+			None,
+			Nutaku,
+		}
 
 		private MockApplicationInfo _appInfo;
 		private string _projectStringID;
+		private string _filePath;
 		private RuntimePlatform _platform;
-		private bool _dev;
-		private bool _amazon;
+		private AndriodSubPlatform _androidSubplatform;
+		private WebGLSubPlatform _webglSubplatform;
+		private string _content;
 
 		[MenuItem("Snipe/Config...")]
 		public static void ShowWindow()
@@ -33,10 +44,30 @@ namespace MiniIT.Snipe.Editor
 
 		protected void OnEnable()
 		{
-			_projectStringID = EditorPrefs.GetString(PREFS_PROPJECT_STRING_ID);
+			_projectStringID = EditorPrefs.GetString(GetProjectStringIdKey());
+			_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILENAME);
 
 			_platform = Application.platform;
 			_appInfo = new MockApplicationInfo();
+
+			ReadConfigFile();
+		}
+
+		private static string GetProjectStringIdKey()
+		{
+			return $"{Application.identifier}.{PREFS_PROPJECT_STRING_ID}";
+		}
+
+		private async void ReadConfigFile()
+		{
+			try
+			{
+				_content = await File.ReadAllTextAsync(_filePath);
+			}
+			catch (System.Exception)
+			{
+				_content = string.Empty;
+			}
 		}
 
 		private void OnGUI()
@@ -45,33 +76,53 @@ namespace MiniIT.Snipe.Editor
 			
 			EditorGUIUtility.labelWidth = 100;
 			
-			string projectStringID = EditorGUILayout.TextField("Project string ID", _projectStringID).Trim();
+			string projectStringID = EditorGUILayout.TextField("Project String ID", _projectStringID).Trim();
 			if (projectStringID != _projectStringID)
 			{
+				if (projectStringID.EndsWith("_dev"))
+				{
+					projectStringID = projectStringID.Substring(0, projectStringID.Length - 4);
+				}
+				else if (projectStringID.EndsWith("_live"))
+				{
+					projectStringID = projectStringID.Substring(0, projectStringID.Length - 5);
+				}
+
 				_projectStringID = projectStringID;
-				EditorPrefs.SetString(PREFS_PROPJECT_STRING_ID, _projectStringID);
+				EditorPrefs.SetString(GetProjectStringIdKey(), _projectStringID);
 			}
 			
 			EditorGUILayout.Space();
 
-			_dev = EditorGUILayout.Toggle("Dev", _dev);
-
 			_appInfo.ApplicationIdentifier = EditorGUILayout.TextField("App Identifier", _appInfo.ApplicationIdentifier);
 			_appInfo.ApplicationVersion = EditorGUILayout.TextField("App Version", _appInfo.ApplicationVersion);
 
-			_platform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _platform);
-			if (_platform.ToString() != _appInfo.ApplicationPlatform)
-			{
-				_appInfo.ApplicationPlatform = _platform.ToString();
-			}
+			var platform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _platform);
+			var androidSubplatform = _androidSubplatform;
+			var webglSubplatform = _webglSubplatform;
 
-			if (_platform == RuntimePlatform.Android)
+			if (platform == RuntimePlatform.Android)
 			{
-				_amazon = EditorGUILayout.Toggle("Amazon", _amazon);
+				androidSubplatform = (AndriodSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _androidSubplatform);
+				webglSubplatform = WebGLSubPlatform.None;
+			}
+			else if (platform == RuntimePlatform.WebGLPlayer)
+			{
+				androidSubplatform = AndriodSubPlatform.GooglePlay;
+				webglSubplatform = (WebGLSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _webglSubplatform);
 			}
 			else
 			{
-				_amazon = false;
+				androidSubplatform = AndriodSubPlatform.GooglePlay;
+				webglSubplatform = WebGLSubPlatform.None;
+			}
+
+			if (_platform != platform || _androidSubplatform != androidSubplatform || _webglSubplatform != webglSubplatform)
+			{
+				_platform = platform;
+				_androidSubplatform = androidSubplatform;
+				_webglSubplatform = webglSubplatform;
+				_appInfo.ApplicationPlatform = GetPlaftomString();
 			}
 
 			EditorGUILayout.Space();
@@ -79,35 +130,70 @@ namespace MiniIT.Snipe.Editor
 			EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(_projectStringID));
 			EditorGUILayout.BeginHorizontal();
 
+			EditorGUI.BeginDisabledGroup(true);
+			GUILayout.Label(_appInfo.ApplicationPlatform);
+			EditorGUI.EndDisabledGroup();
+
 			GUILayout.FlexibleSpace();
 
 			if (GUILayout.Button("Download"))
 			{
-				DownloadConfigAndClose();
+				OnDownloadButtonPressed();
 			}
 			EditorGUILayout.EndHorizontal();
 			EditorGUI.EndDisabledGroup();
+
+			GUILayout.TextArea(_content);
 		}
 
-		private async void DownloadConfigAndClose()
+		private string GetPlaftomString()
+		{
+			if (_platform == RuntimePlatform.Android)
+			{
+				string subPlatform = _androidSubplatform != AndriodSubPlatform.GooglePlay ? _androidSubplatform.ToString() : string.Empty;
+				return $"{_platform}{subPlatform}";
+			}
+			
+			if (_platform == RuntimePlatform.WebGLPlayer)
+			{
+				string subPlatform = _webglSubplatform != WebGLSubPlatform.None ? _webglSubplatform.ToString() : string.Empty;
+				return $"{_platform}{subPlatform}";
+			}
+
+			return $"{_platform}";
+		}
+
+		private async void OnDownloadButtonPressed()
 		{
 			string json = await DownloadConfig();
+			if (string.IsNullOrEmpty(json))
+			{
+				Debug.LogError("Config fetching error. Invalid JSON");
+				return;
+			}
 
-			string filePath = Path.Combine(Application.streamingAssetsPath, SA_FILE_NAME);
-			await File.WriteAllTextAsync(filePath, json);
+			_content = json;
+
+			await File.WriteAllTextAsync(_filePath, json);
 		}
 
 		private async Task<string> DownloadConfig()
 		{
 			Debug.Log("DownloadConfig - start");
 
-			if (string.IsNullOrWhiteSpace( _projectStringID) )
+			if (string.IsNullOrWhiteSpace(_projectStringID))
 			{
 				return null;
 			}
 
 			var loader = new SnipeConfigLoader(_projectStringID, _appInfo);
 			var config = await loader.Load();
+			if (config == null)
+			{
+				Debug.LogError("DownloadConfig - null");
+				return null;
+			}
+
 			string json = fastJSON.JSON.ToJSON(config);
 
 			Debug.Log(json);
