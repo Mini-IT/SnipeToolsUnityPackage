@@ -161,7 +161,7 @@ namespace MiniIT.Snipe.Editor
 			EditorApplication.update -= OnEditorUpdate;
 		}
 
-		private static PackageInfo GetPackageInfo(PackageCollection intalledPackages, string packageName)
+		private static UnityEditor.PackageManager.PackageInfo GetPackageInfo(PackageCollection intalledPackages, string packageName)
 		{
 			foreach (var item in intalledPackages)
 			{

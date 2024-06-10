@@ -1,11 +1,12 @@
 {
   "name": "com.miniit.snipe.tools",
-  "version": "1.3.0",
+  "version": "1.4.0",
   
   "description": "Editor utilities for Snipe",
 	
   "unity": "2017.1",
   "dependencies": {
+    "com.cysharp.unitask": "2.3.0"
   },
   "author": {
     "name": "Mini IT",

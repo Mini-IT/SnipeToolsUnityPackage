@@ -15,8 +15,6 @@ namespace MiniIT.Snipe.Editor
 {
 	public class SnipeApiDownloader : EditorWindow
 	{
-		//private static readonly string[] SNIPE_VERSIONS = new string[] { "V5", "V6" };
-		
 		enum SnipeApiVariation
 		{
 			StaticClass,
@@ -29,7 +27,7 @@ namespace MiniIT.Snipe.Editor
 		private const string PREFS_API_VARIATION = "SnipeApiVariarion";
 
 		private string _directoryPath;
-		private string _snipeVersionSuffix = "V6"; // SNIPE_VERSIONS[1]; //"V6";
+		private string _snipeVersionSuffix = "V6";
 		private SnipeApiVariation _variation = SnipeApiVariation.StaticClass;
 
 		[MenuItem("Snipe/Download SnipeApi...")]
@@ -52,9 +50,11 @@ namespace MiniIT.Snipe.Editor
 			}
 
 			FindSnipeApiDirectory();
-			
+
 			if (SnipeAutoUpdater.AutoUpdateEnabled)
+			{
 				SnipeAutoUpdater.CheckUpdateAvailable();
+			}
 		}
 		
 		private void FindSnipeApiDirectory()
@@ -124,9 +124,12 @@ namespace MiniIT.Snipe.Editor
 			GUILayout.EndHorizontal();
 			
 			EditorGUILayout.Space();
-			
-			EditorGUILayout.HelpBox("Snipe Client package v.5+ only", MessageType.Warning);
-			
+
+			if (_variation == SnipeApiVariation.StaticClass)
+			{
+				EditorGUILayout.HelpBox("Static SnipeApi class is deprecated.\nFor Snipe Client package v.5+ it is recommended to use a service class.", MessageType.Warning);
+			}
+
 			EditorGUILayout.BeginHorizontal();
 			
 			// GUILayout.Label("Snipe Version", GUILayout.Width(EditorGUIUtility.labelWidth));
@@ -180,7 +183,9 @@ namespace MiniIT.Snipe.Editor
 				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
 				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/code/unityBindings{_snipeVersionSuffix}";
 				if (_variation == SnipeApiVariation.Service)
+				{
 					url += "1";
+				}
 				
 				var response = await loader.GetAsync(url);
 

@@ -1,6 +1,12 @@
 {
     "name": "MiniIT.Snipe.Tools.Editor",
-    "references": [],
+    "references": [
+        "MiniIT.Snipe.Config",
+        "MiniIT.Snipe.Unity",
+        "MiniIT.Snipe.Services",
+        "fastJSON",
+        "UniTask"
+    ],
     "includePlatforms": [
         "Editor"
     ],
@@ -10,6 +16,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.miniit.snipe.client",
+            "expression": "6.1.0",
+            "define": "SNIPE_6_1"
+        }
+    ],
     "noEngineReferences": false
 }

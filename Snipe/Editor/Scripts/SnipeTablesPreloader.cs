@@ -292,6 +292,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 #if UNITY_CLOUD_BUILD
 				throw new BuildFailedException($"Failed to load table - {table_name}");
 #endif
+				return;
 			}
 
 			string cache_path = GetTableFilePath(table_name, version);
