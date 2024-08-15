@@ -205,7 +205,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			}
 			catch (Exception e)
 			{
-				Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch tables list: {e}");
+				Debug.Log($"[SnipeTablesPreloader] FAILED to fetch tables list: {e}");
 				return false;
 			}
 		}
