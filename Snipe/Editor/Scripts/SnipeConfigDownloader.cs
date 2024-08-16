@@ -237,8 +237,33 @@ namespace MiniIT.Snipe.Unity.Editor
 				}
 			}
 
-			string contentString;
+			string contentString = await RequestDefaultConfig();
 
+			if (string.IsNullOrEmpty(contentString))
+			{
+				Debug.LogError("DownloadDefaultConfig - downloaded content is empty");
+				return null;
+			}
+
+			Debug.Log("DownloadDefaultConfig - loaded: " + contentString);
+
+			int startIndex = contentString.IndexOf('{', 1);
+			int endIndex = contentString.LastIndexOf('}');
+			endIndex = contentString.LastIndexOf('}', endIndex - 1) + 1;
+			string json = contentString.Substring(startIndex, endIndex - startIndex);
+
+			// Pretyfy JSON
+			var obj = fastJSON.JSON.Parse(json);
+			json = fastJSON.JSON.ToNiceJSON(obj);
+
+			Debug.Log(json);
+			Debug.Log("DownloadDefaultConfig - done");
+
+			return json;
+		}
+
+		private static async Task<string> RequestDefaultConfig()
+		{
 			using (var loader = new HttpClient())
 			{
 				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
@@ -253,29 +278,8 @@ namespace MiniIT.Snipe.Unity.Editor
 					return null;
 				}
 
-				contentString = await response.Content.ReadAsStringAsync();
-				Debug.Log("DownloadDefaultConfig - loaded: " + contentString);
+				return await response.Content.ReadAsStringAsync();
 			}
-
-			if (string.IsNullOrEmpty(contentString))
-			{
-				Debug.LogError("DownloadDefaultConfig - downloaded content is empty");
-				return null;
-			}
-
-			int startIndex = contentString.IndexOf('{', 1);
-			int endIndex = contentString.LastIndexOf('}');
-			endIndex = contentString.LastIndexOf('}', endIndex - 1) + 1;
-			string json = contentString.Substring(startIndex, endIndex - startIndex);
-
-			// Pretyfy JSON
-			var obj = fastJSON.JSON.Parse(json);
-			json = fastJSON.JSON.ToNiceJSON(obj);
-			
-			Debug.Log(json);
-			Debug.Log("DownloadDefaultConfig - done");
-
-			return json;
 		}
 	}
 }
