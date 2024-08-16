@@ -38,6 +38,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		private AndriodSubPlatform _androidSubplatform;
 		private WebGLSubPlatform _webglSubplatform;
 		private string _content;
+		private Vector2 _contentScrollPosition;
 
 		[MenuItem("Snipe/Config...")]
 		public static void ShowWindow()
@@ -130,20 +131,15 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			EditorGUILayout.Space();
 			
-			EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(_projectStringID));
 			EditorGUILayout.BeginHorizontal();
-
-			EditorGUI.BeginDisabledGroup(true);
-			GUILayout.Label(_appInfo.ApplicationPlatform);
-			EditorGUI.EndDisabledGroup();
 
 			GUILayout.FlexibleSpace();
 
-			if (GUILayout.Button("Download"))
+			EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(_projectStringID));
+			if (GUILayout.Button($"Download {_appInfo.ApplicationPlatform}"))
 			{
 				OnDownloadButtonPressed();
 			}
-			EditorGUILayout.EndHorizontal();
 			EditorGUI.EndDisabledGroup();
 
 			if (GUILayout.Button("Download Default"))
@@ -151,7 +147,11 @@ namespace MiniIT.Snipe.Unity.Editor
 				OnDownloadDefaultButtonPressed();
 			}
 
+			EditorGUILayout.EndHorizontal();
+
+			_contentScrollPosition = EditorGUILayout.BeginScrollView(_contentScrollPosition, GUILayout.ExpandHeight(true));
 			GUILayout.TextArea(_content);
+			EditorGUILayout.EndScrollView();
 		}
 
 		private string GetPlaftomString()
