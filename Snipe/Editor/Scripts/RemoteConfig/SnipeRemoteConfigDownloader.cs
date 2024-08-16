@@ -228,7 +228,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			return json;
 		}
 
-		private async Task<string> DownloadDefaultConfig()
+		public static async Task<string> DownloadDefaultConfig()
 		{
 			Debug.Log("DownloadDefaultConfig - start");
 
