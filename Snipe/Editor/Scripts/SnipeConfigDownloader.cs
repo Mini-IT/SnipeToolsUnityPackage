@@ -15,7 +15,6 @@ namespace MiniIT.Snipe.Unity.Editor
 	public class SnipeConfigDownloader : EditorWindow
 	{
 		private const string SA_FILENAME = "remote_config_defaults.json";
-		private const string PREFS_PROPJECT_STRING_ID = "SnipeProjectStringID";
 
 		public enum AndriodSubPlatform
 		{
@@ -32,7 +31,6 @@ namespace MiniIT.Snipe.Unity.Editor
 		}
 
 		private MockApplicationInfo _appInfo;
-		private string _projectStringID;
 		private string _filePath;
 		private RuntimePlatform _platform;
 		private AndriodSubPlatform _androidSubplatform;
@@ -48,18 +46,14 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		protected void OnEnable()
 		{
-			_projectStringID = EditorPrefs.GetString(GetProjectStringIdKey());
+			SnipeToolsConfig.Load();
+
 			_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILENAME);
 
 			_platform = Application.platform;
 			_appInfo = new MockApplicationInfo();
 
 			ReadConfigFile();
-		}
-
-		private static string GetProjectStringIdKey()
-		{
-			return $"{Application.identifier}.{PREFS_PROPJECT_STRING_ID}";
 		}
 
 		private async void ReadConfigFile()
@@ -77,77 +71,89 @@ namespace MiniIT.Snipe.Unity.Editor
 		private void OnGUI()
 		{
 			EditorGUILayout.Space();
-			
-			EditorGUIUtility.labelWidth = 100;
-			
-			string projectStringID = EditorGUILayout.TextField("Project String ID", _projectStringID).Trim();
-			if (projectStringID != _projectStringID)
-			{
-				if (projectStringID.EndsWith("_dev"))
-				{
-					projectStringID = projectStringID.Substring(0, projectStringID.Length - 4);
-				}
-				else if (projectStringID.EndsWith("_live"))
-				{
-					projectStringID = projectStringID.Substring(0, projectStringID.Length - 5);
-				}
 
-				_projectStringID = projectStringID;
-				EditorPrefs.SetString(GetProjectStringIdKey(), _projectStringID);
-			}
+			EditorGUIUtility.labelWidth = 200;
+
+			SnipeToolsConfig.LoadDefaultConfigOnBuild = EditorGUILayout.Toggle("Load Default Config On Build", SnipeToolsConfig.LoadDefaultConfigOnBuild);
 			
 			EditorGUILayout.Space();
 
-			_appInfo.ApplicationIdentifier = EditorGUILayout.TextField("App Identifier", _appInfo.ApplicationIdentifier);
-			_appInfo.ApplicationVersion = EditorGUILayout.TextField("App Version", _appInfo.ApplicationVersion);
+			EditorGUIUtility.labelWidth = 100;
 
-			var platform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _platform);
-			var androidSubplatform = _androidSubplatform;
-			var webglSubplatform = _webglSubplatform;
-
-			if (platform == RuntimePlatform.Android)
+			if (SnipeToolsConfig.LoadDefaultConfigOnBuild)
 			{
-				androidSubplatform = (AndriodSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _androidSubplatform);
-				webglSubplatform = WebGLSubPlatform.None;
-			}
-			else if (platform == RuntimePlatform.WebGLPlayer)
-			{
-				androidSubplatform = AndriodSubPlatform.GooglePlay;
-				webglSubplatform = (WebGLSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _webglSubplatform);
+				SnipeToolsGUI.DrawAuthKeyWidget();
 			}
 			else
 			{
-				androidSubplatform = AndriodSubPlatform.GooglePlay;
-				webglSubplatform = WebGLSubPlatform.None;
-			}
-
-			if (_platform != platform || _androidSubplatform != androidSubplatform || _webglSubplatform != webglSubplatform)
-			{
-				_platform = platform;
-				_androidSubplatform = androidSubplatform;
-				_webglSubplatform = webglSubplatform;
-				_appInfo.ApplicationPlatform = GetPlaftomString();
+				SnipeToolsGUI.DrawProjectStringIDWidget();
 			}
 
 			EditorGUILayout.Space();
-			
-			EditorGUILayout.BeginHorizontal();
 
-			GUILayout.FlexibleSpace();
-
-			EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(_projectStringID));
-			if (GUILayout.Button($"Download {_appInfo.ApplicationPlatform}"))
+			if (!SnipeToolsConfig.LoadDefaultConfigOnBuild)
 			{
-				OnDownloadButtonPressed();
-			}
-			EditorGUI.EndDisabledGroup();
+				_appInfo.ApplicationIdentifier = EditorGUILayout.TextField("App Identifier", _appInfo.ApplicationIdentifier);
+				_appInfo.ApplicationVersion = EditorGUILayout.TextField("App Version", _appInfo.ApplicationVersion);
 
-			if (GUILayout.Button("Download Default"))
+				var platform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _platform);
+				var androidSubplatform = _androidSubplatform;
+				var webglSubplatform = _webglSubplatform;
+
+				if (platform == RuntimePlatform.Android)
+				{
+					androidSubplatform = (AndriodSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _androidSubplatform);
+					webglSubplatform = WebGLSubPlatform.None;
+				}
+				else if (platform == RuntimePlatform.WebGLPlayer)
+				{
+					androidSubplatform = AndriodSubPlatform.GooglePlay;
+					webglSubplatform = (WebGLSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _webglSubplatform);
+				}
+				else
+				{
+					androidSubplatform = AndriodSubPlatform.GooglePlay;
+					webglSubplatform = WebGLSubPlatform.None;
+				}
+
+				if (_platform != platform || _androidSubplatform != androidSubplatform || _webglSubplatform != webglSubplatform)
+				{
+					_platform = platform;
+					_androidSubplatform = androidSubplatform;
+					_webglSubplatform = webglSubplatform;
+					_appInfo.ApplicationPlatform = GetPlaftomString();
+				}
+
+				EditorGUILayout.Space();
+
+				EditorGUILayout.BeginHorizontal();
+
+				GUILayout.FlexibleSpace();
+
+				EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(SnipeToolsConfig.ProjectStringID));
+				if (GUILayout.Button($"Download {_appInfo.ApplicationPlatform}"))
+				{
+					OnDownloadButtonPressed();
+				}
+				EditorGUI.EndDisabledGroup();
+
+				EditorGUILayout.EndHorizontal();
+			}
+			else
 			{
-				OnDownloadDefaultButtonPressed();
-			}
+				EditorGUILayout.BeginHorizontal();
 
-			EditorGUILayout.EndHorizontal();
+				GUILayout.FlexibleSpace();
+
+				EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(SnipeToolsConfig.AuthKey));
+				if (GUILayout.Button("Download Default"))
+				{
+					OnDownloadDefaultButtonPressed();
+				}
+				EditorGUI.EndDisabledGroup();
+
+				EditorGUILayout.EndHorizontal();
+			}
 
 			_contentScrollPosition = EditorGUILayout.BeginScrollView(_contentScrollPosition, GUILayout.ExpandHeight(true));
 			GUILayout.TextArea(_content);
@@ -173,7 +179,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		private async void OnDownloadButtonPressed()
 		{
-			string json = await DownloadConfig();
+			string json = await DownloadPlatformConfig();
 			await ProcessLoadedConfig(json);
 		}
 
@@ -196,28 +202,28 @@ namespace MiniIT.Snipe.Unity.Editor
 			await File.WriteAllTextAsync(_filePath, json);
 		}
 
-		private async Task<string> DownloadConfig()
+		private async Task<string> DownloadPlatformConfig()
 		{
-			Debug.Log("DownloadConfig - start");
+			Debug.Log("DownloadPlatformConfig - start");
 
-			if (string.IsNullOrWhiteSpace(_projectStringID))
+			if (string.IsNullOrWhiteSpace(SnipeToolsConfig.ProjectStringID))
 			{
-				Debug.LogError("DownloadConfig - project ID not specified");
+				Debug.LogError("DownloadPlatformConfig - project ID not specified");
 				return null;
 			}
 
-			var loader = new SnipeConfigLoader(_projectStringID, _appInfo);
+			var loader = new SnipeConfigLoader(SnipeToolsConfig.ProjectStringID, _appInfo);
 			var config = await loader.Load();
 			if (config == null)
 			{
-				Debug.LogError("DownloadConfig - null");
+				Debug.LogError("DownloadPlatformConfig - null");
 				return null;
 			}
 
 			string json = fastJSON.JSON.ToNiceJSON(config);
 
 			Debug.Log(json);
-			Debug.Log("DownloadConfig - done");
+			Debug.Log("DownloadPlatformConfig - done");
 
 			return json;
 		}
@@ -225,17 +231,6 @@ namespace MiniIT.Snipe.Unity.Editor
 		private async Task<string> DownloadDefaultConfig()
 		{
 			Debug.Log("DownloadDefaultConfig - start");
-
-			if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
-			{
-				SnipeAuthKey.Load();
-
-				if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
-				{
-					Debug.LogError("DownloadDefaultConfig - API Key not specified");
-					return null;
-				}
-			}
 
 			string contentString = await RequestDefaultConfig();
 
@@ -266,8 +261,8 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			using (var loader = new HttpClient())
 			{
-				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/clientConfigDefaultStrings";
+				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
+				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/clientConfigDefaultStrings";
 				loader.Timeout = TimeSpan.FromSeconds(10);
 
 				var response = await loader.GetAsync(url);

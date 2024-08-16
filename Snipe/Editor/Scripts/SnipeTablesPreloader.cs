@@ -146,11 +146,11 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			Debug.Log("[SnipeTablesPreloader] DownloadTablesList - start");
 
-			if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			{
-				SnipeAuthKey.Load();
+				SnipeToolsConfig.Load();
 			}
-			if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			{
 				Debug.Log("[SnipeTablesPreloader] - FAILED - invalid AuthKey");
 				return false;
@@ -158,16 +158,16 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			string project_string_id = "";
 
-			Debug.Log($"[SnipeTablesPreloader] project id = {SnipeAuthKey.ProjectId}");
+			Debug.Log($"[SnipeTablesPreloader] project id = {SnipeToolsConfig.ProjectId}");
 
-			if (SnipeAuthKey.ProjectId > 0)
+			if (SnipeToolsConfig.ProjectId > 0)
 			{
 				Debug.Log($"[SnipeTablesPreloader] Fetching projects list");
 
 				try
 				{
-					httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-					var content = httpClient.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/stringID").Result;
+					httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
+					var content = httpClient.GetStringAsync($"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/stringID").Result;
 
 					Debug.Log($"[SnipeTablesPreloader] {content}");
 
