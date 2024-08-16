@@ -2,6 +2,8 @@
 
 using System;
 using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -52,8 +54,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			_appInfo = new MockApplicationInfo();
 
 			ReadConfigFile();
-
-			SnipeAuthKey.Load();
 		}
 
 		private static string GetProjectStringIdKey()
@@ -146,6 +146,11 @@ namespace MiniIT.Snipe.Unity.Editor
 			EditorGUILayout.EndHorizontal();
 			EditorGUI.EndDisabledGroup();
 
+			if (GUILayout.Button("Download Default"))
+			{
+				OnDownloadDefaultButtonPressed();
+			}
+
 			GUILayout.TextArea(_content);
 		}
 
@@ -169,6 +174,17 @@ namespace MiniIT.Snipe.Unity.Editor
 		private async void OnDownloadButtonPressed()
 		{
 			string json = await DownloadConfig();
+			await ProcessLoadedConfig(json);
+		}
+
+		private async void OnDownloadDefaultButtonPressed()
+		{
+			string json = await DownloadDefaultConfig();
+			await ProcessLoadedConfig(json);
+		}
+
+		private async Task ProcessLoadedConfig(string json)
+		{
 			if (string.IsNullOrEmpty(json))
 			{
 				Debug.LogError("Config fetching error. Invalid JSON");
@@ -186,6 +202,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			if (string.IsNullOrWhiteSpace(_projectStringID))
 			{
+				Debug.LogError("DownloadConfig - project ID not specified");
 				return null;
 			}
 
@@ -197,10 +214,66 @@ namespace MiniIT.Snipe.Unity.Editor
 				return null;
 			}
 
-			string json = fastJSON.JSON.ToJSON(config);
+			string json = fastJSON.JSON.ToNiceJSON(config);
 
 			Debug.Log(json);
 			Debug.Log("DownloadConfig - done");
+
+			return json;
+		}
+
+		private async Task<string> DownloadDefaultConfig()
+		{
+			Debug.Log("DownloadDefaultConfig - start");
+
+			if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+			{
+				SnipeAuthKey.Load();
+
+				if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+				{
+					Debug.LogError("DownloadDefaultConfig - API Key not specified");
+					return null;
+				}
+			}
+
+			string contentString;
+
+			using (var loader = new HttpClient())
+			{
+				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
+				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/clientConfigDefaultStrings";
+				loader.Timeout = TimeSpan.FromSeconds(10);
+
+				var response = await loader.GetAsync(url);
+
+				if (!response.IsSuccessStatusCode)
+				{
+					Debug.LogError($"DownloadDefaultConfig - FAILED - HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
+					return null;
+				}
+
+				contentString = await response.Content.ReadAsStringAsync();
+				Debug.Log("DownloadDefaultConfig - loaded: " + contentString);
+			}
+
+			if (string.IsNullOrEmpty(contentString))
+			{
+				Debug.LogError("DownloadDefaultConfig - downloaded content is empty");
+				return null;
+			}
+
+			int startIndex = contentString.IndexOf('{', 1);
+			int endIndex = contentString.LastIndexOf('}');
+			endIndex = contentString.LastIndexOf('}', endIndex - 1) + 1;
+			string json = contentString.Substring(startIndex, endIndex - startIndex);
+
+			// Pretyfy JSON
+			var obj = fastJSON.JSON.Parse(json);
+			json = fastJSON.JSON.ToNiceJSON(obj);
+			
+			Debug.Log(json);
+			Debug.Log("DownloadDefaultConfig - done");
 
 			return json;
 		}
