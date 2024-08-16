@@ -11,7 +11,7 @@ using UnityEditor.PackageManager.Requests;
 using Debug = UnityEngine.Debug;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 #if !UNITY_CLOUD_BUILD
 	[InitializeOnLoad]

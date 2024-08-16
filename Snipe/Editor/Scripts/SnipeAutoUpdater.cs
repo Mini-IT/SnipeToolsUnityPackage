@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 #if !UNITY_CLOUD_BUILD
 	[InitializeOnLoad]

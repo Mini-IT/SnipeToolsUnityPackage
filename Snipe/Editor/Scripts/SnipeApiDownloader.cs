@@ -11,7 +11,7 @@ using UnityEditor;
 
 using Debug = UnityEngine.Debug;
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 	public class SnipeApiDownloader : EditorWindow
 	{

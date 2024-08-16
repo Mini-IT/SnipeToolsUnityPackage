@@ -1,7 +1,7 @@
 using System.IO;
 using UnityEngine;
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 	public static class SnipeAuthKey
 	{

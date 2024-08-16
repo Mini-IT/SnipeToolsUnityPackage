@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR && SNIPE_6_1
 
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -51,6 +52,8 @@ namespace MiniIT.Snipe.Unity.Editor
 			_appInfo = new MockApplicationInfo();
 
 			ReadConfigFile();
+
+			SnipeAuthKey.Load();
 		}
 
 		private static string GetProjectStringIdKey()
@@ -64,7 +67,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				_content = await File.ReadAllTextAsync(_filePath);
 			}
-			catch (System.Exception)
+			catch (Exception)
 			{
 				_content = string.Empty;
 			}
