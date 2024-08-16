@@ -82,8 +82,8 @@ namespace MiniIT.Snipe.Unity.Editor
 							LoadDefaultConfigOnBuild = true,
 						};
 
-						//Debug.Log($"[{nameof(SnipeToolsConfig)}] Load - Deleting legacy snipe_api_key file");
-						//File.Delete(path);
+						Debug.Log($"[{nameof(SnipeToolsConfig)}] Load - Deleting legacy snipe_api_key file");
+						File.Delete(path);
 
 						Debug.Log($"[{nameof(SnipeToolsConfig)}] Load - Save new config file");
 						Save();
