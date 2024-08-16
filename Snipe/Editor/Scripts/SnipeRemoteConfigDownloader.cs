@@ -12,7 +12,7 @@ using Debug = UnityEngine.Debug;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
-	public class SnipeConfigDownloader : EditorWindow
+	public class SnipeRemoteConfigDownloader : EditorWindow
 	{
 		private const string SA_FILENAME = "remote_config_defaults.json";
 
@@ -38,10 +38,10 @@ namespace MiniIT.Snipe.Unity.Editor
 		private string _content;
 		private Vector2 _contentScrollPosition;
 
-		[MenuItem("Snipe/Config...")]
+		[MenuItem("Snipe/Remote Config...")]
 		public static void ShowWindow()
 		{
-			EditorWindow.GetWindow<SnipeConfigDownloader>("Snipe Config");
+			EditorWindow.GetWindow<SnipeRemoteConfigDownloader>("Snipe Remote Config");
 		}
 
 		protected void OnEnable()
