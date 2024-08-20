@@ -31,7 +31,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		}
 
 		private MockApplicationInfo _appInfo;
-		private string _filePath;
+		private static string s_filePath;
 		private RuntimePlatform _platform;
 		private AndriodSubPlatform _androidSubplatform;
 		private WebGLSubPlatform _webglSubplatform;
@@ -44,11 +44,16 @@ namespace MiniIT.Snipe.Unity.Editor
 			EditorWindow.GetWindow<SnipeRemoteConfigDownloader>("Snipe Remote Config");
 		}
 
+		public static void InitFilePath()
+		{
+			s_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILENAME);
+		}
+
 		protected void OnEnable()
 		{
 			SnipeToolsConfig.Load();
 
-			_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILENAME);
+			InitFilePath();
 
 			_platform = Application.platform;
 			_appInfo = new MockApplicationInfo();
@@ -60,7 +65,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			try
 			{
-				_content = await File.ReadAllTextAsync(_filePath);
+				_content = await File.ReadAllTextAsync(s_filePath);
 			}
 			catch (Exception)
 			{
@@ -180,26 +185,26 @@ namespace MiniIT.Snipe.Unity.Editor
 		private async void OnDownloadButtonPressed()
 		{
 			string json = await DownloadPlatformConfig();
-			await ProcessLoadedConfig(json);
+			_content = await CheckAndSaveLoadedConfig(json);
 		}
 
 		private async void OnDownloadDefaultButtonPressed()
 		{
 			string json = await DownloadDefaultConfig();
-			await ProcessLoadedConfig(json);
+			_content = await CheckAndSaveLoadedConfig(json);
 		}
 
-		private async Task ProcessLoadedConfig(string json)
+		public static async Task<string> CheckAndSaveLoadedConfig(string json)
 		{
 			if (string.IsNullOrEmpty(json))
 			{
 				Debug.LogError("Config fetching error. Invalid JSON");
-				return;
+				return null;
 			}
 
-			_content = json;
+			await File.WriteAllTextAsync(s_filePath, json);
 
-			await File.WriteAllTextAsync(_filePath, json);
+			return json;
 		}
 
 		private async Task<string> DownloadPlatformConfig()
@@ -255,6 +260,12 @@ namespace MiniIT.Snipe.Unity.Editor
 			Debug.Log("DownloadDefaultConfig - done");
 
 			return json;
+		}
+
+		public static async Task<string> DownloadAndSaveDefaultConfig()
+		{
+			string json = await DownloadDefaultConfig();
+			return await CheckAndSaveLoadedConfig(json);
 		}
 
 		private static async Task<string> RequestDefaultConfig()

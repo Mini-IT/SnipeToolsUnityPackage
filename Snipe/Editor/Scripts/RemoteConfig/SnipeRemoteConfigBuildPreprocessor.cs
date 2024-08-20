@@ -21,7 +21,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] Downloading default config...");
 			
-			SnipeRemoteConfigDownloader.DownloadDefaultConfig()
+			SnipeRemoteConfigDownloader.DownloadAndSaveDefaultConfig()
 				.ContinueWith((task) =>
 				{
 #if UNITY_CLOUD_BUILD
