@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -13,25 +14,28 @@ namespace MiniIT.Snipe.Unity.Editor
 			Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] OnPreprocessBuild - Started");
 
 			SnipeToolsConfig.Load();
+
 			if (!SnipeToolsConfig.LoadDefaultConfigOnBuild)
 			{
-				Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] Default config - Auto load disabled!");
+				Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] Default config autoloading disabled");
 				return;
 			}
 
 			Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] Downloading default config...");
-			
-			SnipeRemoteConfigDownloader.DownloadAndSaveDefaultConfig()
-				.ContinueWith((task) =>
-				{
+
+			var task = Task.Run(SnipeRemoteConfigDownloader.DownloadAndSaveDefaultConfig);
+			task.Wait();
+
+			if (!task.IsCompletedSuccessfully || string.IsNullOrEmpty(task.Result))
+			{
+				Debug.LogError($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] OnPreprocessBuild - FAILED");
+
 #if UNITY_CLOUD_BUILD
-					if (!task.IsCompleted || string.IsNullOrEmpty(task.Result))
-					{
-						throw new BuildFailedException($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] Failed to download default config");
-					}
+				throw new BuildFailedException($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] Failed to download default config");
 #endif
-					Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] OnPreprocessBuild - Finished");
-				});
+			}
+
+			Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] OnPreprocessBuild - Finished");
 		}
 	}
 }
