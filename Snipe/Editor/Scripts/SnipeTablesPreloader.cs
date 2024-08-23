@@ -15,12 +15,13 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 {
 	private const int LOADING_RETIES_COUNT = 4;
 
-	private static string mTablesUrl;
+	private static string s_tablesUrl;
 	
-	private static Dictionary<string, string> mVersions = null;
-	private static string mStreamingAssetsPath;
-	
-	public int callbackOrder { get { return 10; } }
+	private static Dictionary<string, string> s_versions = null;
+	private static string s_streamingAssetsPath;
+
+	public int callbackOrder => 10;
+
 	public void OnPreprocessBuild(BuildReport report)
 	{
 		Debug.Log("[SnipeTablesPreloader] OnPreprocessBuild - started");
@@ -35,30 +36,30 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 		return Path.Combine(Application.streamingAssetsPath, "snipe_tables_version.txt");
 	}
 	
-	public static string GetTablesBaseUrl(string project_string_id)
+	public static string GetTablesBaseUrl(string projectStringID)
 	{
-		return $"https://static-dev.snipe.dev/{project_string_id}/";
+		return $"https://static-dev.snipe.dev/{projectStringID}/";
 	}
 
 	private static string GetVersionsUrl()
 	{
-		return $"{mTablesUrl}/version.json";
+		return $"{s_tablesUrl}/version.json";
 	}
 
-	private static string GetTableUrl(string table_name, string version)
+	private static string GetTableUrl(string tableName, string version)
 	{
-		return $"{mTablesUrl}/{version}_{table_name}.json.gz";
+		return $"{s_tablesUrl}/{version}_{tableName}.json.gz";
 	}
 
-	private static string GetTableFilePath(string table_name, string version)
+	private static string GetTableFilePath(string tableName, string version)
 	{
-		string filename = $"{version}_{table_name}.jsongz";
+		string filename = $"{version}_{tableName}.jsongz";
 
 		// NOTE: There is a bug - only lowercase works
 		// (https://issuetracker.unity3d.com/issues/android-loading-assets-from-assetbundles-takes-significantly-more-time-when-the-project-is-built-as-an-aab)
 		filename = filename.ToLower();
 
-		return Path.Combine(mStreamingAssetsPath, filename);
+		return Path.Combine(s_streamingAssetsPath, filename);
 	}
 
 	[MenuItem ("Snipe/Preload Tables")]
@@ -74,7 +75,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 	{
 		Debug.Log("[SnipeTablesPreloader] Load - started");
 		
-		mStreamingAssetsPath = Application.streamingAssetsPath;
+		s_streamingAssetsPath = Application.streamingAssetsPath;
 
 		for (int retry = 0; retry < LOADING_RETIES_COUNT; retry++)
 		{
@@ -96,18 +97,18 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			}
 		}
 
-		if (mVersions == null || mVersions.Count == 0)
+		if (s_versions == null || s_versions.Count == 0)
 		{
 			Debug.Log("[SnipeTablesPreloader] - Tables list is empty");
 			return;
 		}
 		
-		Debug.Log("[SnipeTablesPreloader] Total tables count = " + mVersions.Count);
+		Debug.Log("[SnipeTablesPreloader] Total tables count = " + s_versions.Count);
 		
-		var files = Directory.EnumerateFiles(mStreamingAssetsPath, "*.jsongz*");
+		var files = Directory.EnumerateFiles(s_streamingAssetsPath, "*.jsongz*");
 		foreach (string filename in files)
 		{
-			foreach (string tablename in mVersions.Keys)
+			foreach (string tablename in s_versions.Keys)
 			{
 				if (filename.ToLower().Contains($"_{tablename.ToLower()}."))
 				{
@@ -118,11 +119,13 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			}
 		}
 		
-		string version_file_path = GetTablesVersionFilePath();
-		if (File.Exists(version_file_path))
-			File.Delete(version_file_path);
+		string versionFilePath = GetTablesVersionFilePath();
+		if (File.Exists(versionFilePath))
+		{
+			File.Delete(versionFilePath);
+		}
 
-		foreach (string tablename in mVersions.Keys)
+		foreach (string tablename in s_versions.Keys)
 		{
 			Debug.Log($"[SnipeTablesPreloader] {tablename} - start loading");
 
@@ -155,7 +158,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			return false;
 		}
 
-		string project_string_id = "";
+		string projectStringID;
 
 		Debug.Log($"[SnipeTablesPreloader] project id = {SnipeAuthKey.ProjectId}");
 
@@ -170,11 +173,11 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 				Debug.Log($"[SnipeTablesPreloader] {content}");
 
-				var response_data = new ProjectStringIdResponseData();
-				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, response_data);
-				project_string_id = response_data.stringID;
-				Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {response_data.errorCode}");
-				Debug.Log($"[SnipeTablesPreloader] Project StringID = {project_string_id}");
+				var responseData = new ProjectStringIdResponseData();
+				UnityEditor.EditorJsonUtility.FromJsonOverwrite(content, responseData);
+				projectStringID = responseData.stringID;
+				Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {responseData.errorCode}");
+				Debug.Log($"[SnipeTablesPreloader] Project StringID = {projectStringID}");
 			}
 			catch (Exception e)
 			{
@@ -182,11 +185,11 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 				return false;
 			}
 
-			Debug.Log($"[SnipeTablesPreloader] Fetching tables list for project {project_string_id}");
+			Debug.Log($"[SnipeTablesPreloader] Fetching tables list for project {projectStringID}");
 			
-			mTablesUrl = GetTablesBaseUrl(project_string_id);
+			s_tablesUrl = GetTablesBaseUrl(projectStringID);
 			
-			Debug.Log($"[SnipeTablesPreloader] TablesUrl = {mTablesUrl}");
+			Debug.Log($"[SnipeTablesPreloader] TablesUrl = {s_tablesUrl}");
 
 			try
 			{
@@ -197,7 +200,7 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 				
 				using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
 				{
-					string path = Path.Combine(mStreamingAssetsPath, "snipe_tables.json");
+					string path = Path.Combine(s_streamingAssetsPath, "snipe_tables.json");
 					SaveToCache(stream, path);
 				}
 
@@ -216,33 +219,33 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 	private static void ParseVersions(string json)
 	{
-		var list_wrapper = new TablesListResponseListWrapper();
-		UnityEditor.EditorJsonUtility.FromJsonOverwrite(json, list_wrapper);
-		if (list_wrapper.tables is List<TablesListResponseListItem> list)
+		var listWrapper = new TablesListResponseListWrapper();
+		UnityEditor.EditorJsonUtility.FromJsonOverwrite(json, listWrapper);
+		if (listWrapper.tables is List<TablesListResponseListItem> list)
 		{
 			Debug.Log($"[SnipeTablesPreloader] Parsed tables count = {list.Count}");
 
-			mVersions = new Dictionary<string, string>();
+			s_versions = new Dictionary<string, string>();
 
 			foreach (var item in list)
 			{
 				if (!string.IsNullOrEmpty(item.name))
 				{
-					mVersions[item.name] = $"{item.version}";
+					s_versions[item.name] = $"{item.version}";
 				}
 			}
 		}
 	}
 
-	protected static async Task LoadTable(HttpClient httpClient, string table_name)
+	protected static async Task LoadTable(HttpClient httpClient, string tableName)
 	{
-		if (!mVersions.TryGetValue(table_name, out string version))
+		if (!s_versions.TryGetValue(tableName, out string version))
 		{
-			Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name + " - Version unknown");
+			Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + tableName + " - Version unknown");
 			return;
 		}
 
-		string url = GetTableUrl(table_name, version);
+		string url = GetTableUrl(tableName, version);
 		
 		Debug.Log("[SnipeTablesPreloader] Loading table " + url);
 		
@@ -253,20 +256,20 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			{
 				try
 				{
-					var loader_task = httpClient.GetAsync(url);
+					var loaderTask = httpClient.GetAsync(url);
 
-					await loader_task;
+					await loaderTask;
 
-					if (loader_task.IsFaulted || loader_task.IsCanceled || !loader_task.Result.IsSuccessStatusCode)
+					if (loaderTask.IsFaulted || loaderTask.IsCanceled || !loaderTask.Result.IsSuccessStatusCode)
 					{
-						Debug.LogError($"[SnipeTablesPreloader] Failed to load table - {table_name}   (loader failed) - StatusCode: {loader_task.Result.StatusCode}");
+						Debug.LogError($"[SnipeTablesPreloader] Failed to load table - {tableName}   (loader failed) - StatusCode: {loaderTask.Result.StatusCode}");
 					}
 						
-					response = loader_task.Result;
+					response = loaderTask.Result;
 				}
 				catch (Exception loader_ex)
 				{
-					Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name + " - loader exception: " + loader_ex.ToString());
+					Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + tableName + " - loader exception: " + loader_ex.ToString());
 				}
 
 				if (response != null)
@@ -281,39 +284,39 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 
 				if (retry < LOADING_RETIES_COUNT - 1)
 				{
-					Debug.Log($"[SnipeTablesPreloader] Failed to load table - {table_name}   (loader failed) - rety {retry}");
+					Debug.Log($"[SnipeTablesPreloader] Failed to load table - {tableName}   (loader failed) - rety {retry}");
 					await Task.Delay(3000 * (retry + 1));
 				}
 			}
 
 			if (response != null && !response.IsSuccessStatusCode)
 			{
-				Debug.LogError($"[SnipeTablesPreloader] LoadTable {table_name} - Failed - http error: {response.StatusCode}");
+				Debug.LogError($"[SnipeTablesPreloader] LoadTable {tableName} - Failed - http error: {response.StatusCode}");
 #if UNITY_CLOUD_BUILD
-				throw new BuildFailedException($"Failed to load table - {table_name}");
+				throw new BuildFailedException($"Failed to load table - {tableName}");
 #endif
 				return;
 			}
 
-			string cache_path = GetTableFilePath(table_name, version);
+			string cachePath = GetTableFilePath(tableName, version);
 
 			using (var file_content_stream = await response.Content.ReadAsStreamAsync())
 			{
-				SaveToCache(file_content_stream, cache_path);
+				SaveToCache(file_content_stream, cachePath);
 			}
 		}
 		catch (Exception e)
 		{
-			Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + table_name + " - " + e.ToString());
+			Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + tableName + " - " + e.ToString());
 #if UNITY_CLOUD_BUILD
-			throw new BuildFailedException($"Failed to load table - {table_name}");
+			throw new BuildFailedException($"Failed to load table - {tableName}");
 #endif
 		}
 	}
 
-	private static void SaveToCache(Stream content, string cache_path)
+	private static void SaveToCache(Stream content, string cachePath)
 	{
-		using (FileStream cache_write_stream = new FileStream(cache_path, FileMode.Create, FileAccess.Write))
+		using (var cacheWriteStream = new FileStream(cachePath, FileMode.Create, FileAccess.Write))
 		{
 			try
 			{
@@ -321,15 +324,15 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 				{
 					content.Position = 0;
 				}
-				content.CopyTo(cache_write_stream);
+				content.CopyTo(cacheWriteStream);
 
-				Debug.Log("[SnipeTablesPreloader] Saved: " + cache_path);
+				Debug.Log("[SnipeTablesPreloader] Saved: " + cachePath);
 			}
 			catch (Exception ex)
 			{
-				Debug.LogError("[SnipeTablesPreloader] Failed to save - " + cache_path + " - " + ex.ToString());
+				Debug.LogError("[SnipeTablesPreloader] Failed to save - " + cachePath + " - " + ex.ToString());
 #if UNITY_CLOUD_BUILD
-				throw new BuildFailedException($"Failed to save table - {cache_path}");
+				throw new BuildFailedException($"Failed to save table - {cachePath}");
 #endif
 			}
 		}
