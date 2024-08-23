@@ -71,11 +71,12 @@ public class SnipeTablesPreloader : IPreprocessBuildWithReport
 			var loadingTask = Task.Run(() => Load(client));
 			loadingTask.Wait();
 
-#if UNITY_CLOUD_BUILD
-#endif
 			if (!loadingTask.IsCompletedSuccessfully || !loadingTask.Result)
 			{
+				Debug.LogError("[SnipeTablesPreloader] Loading FAILED");
+#if UNITY_CLOUD_BUILD
 				throw new BuildFailedException("Failed to fetch tables list");
+#endif
 			}
 		}
 
