@@ -11,7 +11,7 @@ using UnityEditor;
 
 using Debug = UnityEngine.Debug;
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 	public class SnipeApiDownloader : EditorWindow
 	{
@@ -38,7 +38,7 @@ namespace MiniIT.Snipe.Editor
 
 		protected void OnEnable()
 		{
-			SnipeAuthKey.Load();
+			SnipeToolsConfig.Load();
 
 			try
 			{
@@ -88,23 +88,18 @@ namespace MiniIT.Snipe.Editor
 			EditorGUILayout.Space();
 			
 			EditorGUIUtility.labelWidth = 100;
-			
-			string auth_key = EditorGUILayout.TextField("API Key", SnipeAuthKey.AuthKey);
-			if (auth_key != SnipeAuthKey.AuthKey)
-			{
-				SnipeAuthKey.Set(auth_key);
-				SnipeAuthKey.Save();
-			}
-			
+
+			SnipeToolsGUI.DrawAuthKeyWidget();
+
 			EditorGUILayout.Space();
 			
-			bool auth_valid = (!string.IsNullOrEmpty(SnipeAuthKey.AuthKey) && SnipeAuthKey.ProjectId > 0);
+			bool auth_valid = (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey) && SnipeToolsConfig.ProjectId > 0);
 
 			EditorGUI.BeginDisabledGroup(!auth_valid);
 
-			//if (!string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+			//if (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			//{
-			//	EditorGUILayout.LabelField($"Project: [{SnipeAuthKey.ProjectId}] - extracted from the api key");
+			//	EditorGUILayout.LabelField($"Project: [{SnipeToolsConfig.ProjectId}] - extracted from the api key");
 			//}
 			
 			EditorGUILayout.Space();
@@ -172,7 +167,7 @@ namespace MiniIT.Snipe.Editor
 		{
 			Debug.Log("DownloadSnipeApi - start");
 			
-			if (string.IsNullOrEmpty(SnipeAuthKey.AuthKey))
+			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			{
 				Debug.LogError("DownloadSnipeApi - FAILED to get token");
 				return;
@@ -180,8 +175,8 @@ namespace MiniIT.Snipe.Editor
 
 			using (var loader = new HttpClient())
 			{
-				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeAuthKey.AuthKey);
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeAuthKey.ProjectId}/code/unityBindings{_snipeVersionSuffix}";
+				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
+				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/unityBindings{_snipeVersionSuffix}";
 				if (_variation == SnipeApiVariation.Service)
 				{
 					url += "1";

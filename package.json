@@ -1,22 +1,21 @@
 {
   "name": "com.miniit.snipe.tools",
-  "version": "1.4.0",
-  
-  "description": "Editor utilities for Snipe",
-	
-  "unity": "2017.1",
+  "version": "1.5.0",
+  "unity": "2022.3",
   "dependencies": {
+    "com.miniit.fastjson": "1.0.0",
     "com.cysharp.unitask": "2.3.0"
   },
   "author": {
     "name": "Mini IT",
     "url": "http://snipeserver.com"
   },
-  "displayName": "Snipe Client Tools",
   "keywords": [
     "Snipe",
     "MiniIT",
     "Server",
     "Client"
-  ]
+  ],
+  "displayName": "Snipe Client Tools",
+  "description": "Editor utilities for Snipe"
 }
