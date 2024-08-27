@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEditor.PackageManager;
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 	public static class AdvertisingIdFetcherInstaller
 	{

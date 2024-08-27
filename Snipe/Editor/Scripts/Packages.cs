@@ -1,5 +1,5 @@
 
-namespace MiniIT.Snipe.Editor
+namespace MiniIT.Snipe.Unity.Editor
 {
 	public class GitPackageInfo
 	{
