@@ -202,6 +202,11 @@ namespace MiniIT.Snipe.Unity.Editor
 				return null;
 			}
 
+			if (string.IsNullOrEmpty(s_filePath))
+			{
+				InitFilePath();
+			}
+
 			await File.WriteAllTextAsync(s_filePath, json);
 
 			return json;
