@@ -287,6 +287,8 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Debug.Log("[SnipeTablesPreloader] Loading table " + url);
 
+			httpClient.Timeout = TimeSpan.FromSeconds(6);
+			
 			try
 			{
 				HttpResponseMessage response = null;
@@ -294,7 +296,6 @@ namespace MiniIT.Snipe.Unity.Editor
 				{
 					try
 					{
-						httpClient.Timeout = TimeSpan.FromSeconds(6);
 						var loaderTask = httpClient.GetAsync(url, cancellationToken);
 
 						await loaderTask;
