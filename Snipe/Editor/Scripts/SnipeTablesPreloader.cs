@@ -94,9 +94,12 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			s_streamingAssetsPath = Application.streamingAssetsPath;
 
+			bool tablesListReady = false;
+
 			for (int retry = 0; retry < LOADING_RETIES_COUNT; retry++)
 			{
-				if (DownloadTablesList(httpClient))
+				tablesListReady = DownloadTablesList(httpClient);
+				if (tablesListReady)
 				{
 					break;
 				}
@@ -115,7 +118,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			if (s_versions == null || s_versions.Count == 0)
 			{
 				Debug.Log("[SnipeTablesPreloader] - Tables list is empty");
-				return false;
+				return tablesListReady;
 			}
 
 			Debug.Log("[SnipeTablesPreloader] Total tables count = " + s_versions.Count);

@@ -1,6 +1,6 @@
 {
   "name": "com.miniit.snipe.tools",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "unity": "2022.3",
   "dependencies": {
     "com.miniit.fastjson": "1.0.0",
