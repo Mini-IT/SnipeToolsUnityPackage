@@ -1,34 +1,21 @@
 ﻿#if UNITY_EDITOR
 
-using System;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using UnityEngine;
 using UnityEditor;
-
+using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
 	public class SnipeApiDownloader : EditorWindow
 	{
-		enum SnipeApiVariation
-		{
-			StaticClass,
-			Service,
-		}
-
-		private const string STATIC_FILE_NAME = "SnipeApi.cs";
 		private const string SERVICE_FILE_NAME = "SnipeApiService.cs";
-
-		private const string PREFS_API_VARIATION = "SnipeApiVariarion";
 
 		private string _directoryPath;
 		private string _snipeVersionSuffix = "V6";
-		private SnipeApiVariation _variation = SnipeApiVariation.StaticClass;
 
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
@@ -39,15 +26,6 @@ namespace MiniIT.Snipe.Unity.Editor
 		protected void OnEnable()
 		{
 			SnipeToolsConfig.Load();
-
-			try
-			{
-				_variation = (SnipeApiVariation)EditorPrefs.GetInt(PREFS_API_VARIATION, (int)SnipeApiVariation.StaticClass);
-			}
-			catch (Exception)
-			{
-				_variation = SnipeApiVariation.StaticClass;
-			}
 
 			FindSnipeApiDirectory();
 
@@ -62,18 +40,17 @@ namespace MiniIT.Snipe.Unity.Editor
 			string[] results = AssetDatabase.FindAssets("SnipeApi");
 			if (results != null && results.Length > 0)
 			{
-				string path = AssetDatabase.GUIDToAssetPath(results[0]);
-				if (path.EndsWith(STATIC_FILE_NAME))
+				for (int i = 0; i < results.Length; i++)
 				{
-					// Application.dataPath ends with "Assets"
-					// path starts with "Assets" and ends with "SnipeApi.cs"
-					_directoryPath = Application.dataPath + path.Substring(6, path.Length - 17);
-				}
-				else if (path.EndsWith(SERVICE_FILE_NAME))
-				{
-					// Application.dataPath ends with "Assets"
-					// path starts with "Assets" and ends with "SnipeApiService.cs"
-					_directoryPath = Application.dataPath + path.Substring(6, path.Length - 24);
+					string path = AssetDatabase.GUIDToAssetPath(results[i]);
+
+					if (path.EndsWith(SERVICE_FILE_NAME))
+					{
+						// Application.dataPath ends with "Assets"
+						// path starts with "Assets" and ends with "SnipeApiService.cs"
+						_directoryPath = Application.dataPath + path.Substring(6, path.Length - 24);
+						break;
+					}
 				}
 			}
 			
@@ -96,11 +73,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			bool auth_valid = (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey) && SnipeToolsConfig.ProjectId > 0);
 
 			EditorGUI.BeginDisabledGroup(!auth_valid);
-
-			//if (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
-			//{
-			//	EditorGUILayout.LabelField($"Project: [{SnipeToolsConfig.ProjectId}] - extracted from the api key");
-			//}
 			
 			EditorGUILayout.Space();
 			EditorGUILayout.Space();
@@ -109,7 +81,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			_directoryPath = EditorGUILayout.TextField("Directory", _directoryPath);
 			if (GUILayout.Button("...", GUILayout.Width(40)))
 			{
-				string filename = (_variation == SnipeApiVariation.Service) ? SERVICE_FILE_NAME : STATIC_FILE_NAME;
+				string filename = SERVICE_FILE_NAME;
 				string path = EditorUtility.SaveFolderPanel($"Choose location of {filename}", _directoryPath, "");
 				if (!string.IsNullOrEmpty(path))
 				{
@@ -119,29 +91,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			GUILayout.EndHorizontal();
 			
 			EditorGUILayout.Space();
-
-			if (_variation == SnipeApiVariation.StaticClass)
-			{
-				EditorGUILayout.HelpBox("Static SnipeApi class is deprecated.\nFor Snipe Client package v.5+ it is recommended to use a service class.", MessageType.Warning);
-			}
-
-			EditorGUILayout.BeginHorizontal();
-			
-			// GUILayout.Label("Snipe Version", GUILayout.Width(EditorGUIUtility.labelWidth));
-
-			// int index = Array.IndexOf(SNIPE_VERSIONS, _snipeVersionSuffix);
-			// index = EditorGUILayout.Popup(index, SNIPE_VERSIONS);
-			// _snipeVersionSuffix = SNIPE_VERSIONS[index];
-			
-			bool serviceVariation = (_variation == SnipeApiVariation.Service);
-			bool selectedVariation = EditorGUILayout.Toggle("Service class", serviceVariation);
-			if (selectedVariation != serviceVariation)
-			{
-				_variation = selectedVariation ? SnipeApiVariation.Service : SnipeApiVariation.StaticClass;
-				EditorPrefs.SetInt(PREFS_API_VARIATION, (int)_variation);
-			}
-			
-			EditorGUILayout.EndHorizontal();
 			
 			EditorGUILayout.BeginHorizontal();
 
@@ -176,11 +125,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			using (var loader = new HttpClient())
 			{
 				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/unityBindings{_snipeVersionSuffix}";
-				if (_variation == SnipeApiVariation.Service)
-				{
-					url += "1";
-				}
+				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/unityBindings{_snipeVersionSuffix}1";
 				
 				var response = await loader.GetAsync(url);
 
@@ -190,50 +135,11 @@ namespace MiniIT.Snipe.Unity.Editor
 					return;
 				}
 				
-				string filename = (_variation == SnipeApiVariation.Service) ? SERVICE_FILE_NAME : STATIC_FILE_NAME;
-				string filePath = Path.Combine(_directoryPath, filename);
+				string filePath = Path.Combine(_directoryPath, SERVICE_FILE_NAME);
 
 				using (StreamWriter sw = File.CreateText(filePath))
 				{
 					await response.Content.CopyToAsync(sw.BaseStream);
-				}
-
-				if (_variation == SnipeApiVariation.Service)
-				{
-					string staticSnipeApiPath = Path.Combine(_directoryPath, STATIC_FILE_NAME);
-					if (File.Exists(staticSnipeApiPath))
-					{
-						File.Delete(staticSnipeApiPath);
-						using (StreamWriter sw = File.CreateText(staticSnipeApiPath))
-						{
-							sw.WriteLine("using MiniIT.Snipe.Api;");
-							sw.WriteLine("namespace MiniIT.Snipe");
-							sw.WriteLine("{");
-							sw.WriteLine("\tpublic static class SnipeApi");
-							sw.WriteLine("\t{");
-							sw.WriteLine("\t\tpublic static SnipeApiContext Context => SnipeApiContext.Default;");
-							sw.WriteLine("\t\tpublic static SnipeApiService Service => Context.Api;");
-
-							string content = await response.Content.ReadAsStringAsync();
-							string patternBefore = @"public\sSnipeApiModule\w*\s";
-							string patternAfter = @"\s?{\s?get;";
-							var regex = new Regex(patternBefore + @"\w*" + patternAfter);
-							var regexBefore = new Regex(patternBefore);
-							var regexAfter = new Regex(patternAfter);
-							var matches = regex.Matches(content);
-							foreach (var match in matches ) 
-							{
-								string module = regexBefore.Replace(regexAfter.Replace(match.ToString(), string.Empty), string.Empty);
-								if (string.IsNullOrEmpty(module))
-									continue;
-
-								sw.WriteLine($"\t\tpublic static SnipeApiModule{module} {module} => Service.{module};");
-							}
-
-							sw.WriteLine("\t}");
-							sw.WriteLine("}");
-						}
-					}
 				}
 			}
 
