@@ -12,10 +12,15 @@ namespace MiniIT.Snipe.Unity.Editor
 {
 	public class SnipeApiDownloader : EditorWindow
 	{
+#if SNIPE_7_0_OR_NEWER
+		private const string SNIPE_VERSION_SUFFIX = "V7";
+#else
+		private const string SNIPE_VERSION_SUFFIX = "V61";
+#endif
+
 		private const string SERVICE_FILE_NAME = "SnipeApiService.cs";
 
 		private string _directoryPath;
-		private string _snipeVersionSuffix = "V6";
 
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
@@ -125,7 +130,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			using (var loader = new HttpClient())
 			{
 				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/unityBindings{_snipeVersionSuffix}1";
+				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/unityBindings{SNIPE_VERSION_SUFFIX}";
 				
 				var response = await loader.GetAsync(url);
 
