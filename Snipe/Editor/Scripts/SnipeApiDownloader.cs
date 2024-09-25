@@ -99,6 +99,10 @@ namespace MiniIT.Snipe.Unity.Editor
 			
 			EditorGUILayout.BeginHorizontal();
 
+			EditorGUI.BeginDisabledGroup(true);
+			GUILayout.Label("Snipe API Service Version: " + SNIPE_VERSION_SUFFIX);
+			EditorGUI.EndDisabledGroup();
+
 			GUILayout.FlexibleSpace();
 
 			if (GUILayout.Button("Download"))
