@@ -67,9 +67,11 @@ namespace MiniIT.Snipe.Unity.Editor
 		[MenuItem("Snipe/Preload Tables")]
 		public static void Load()
 		{
-			using (var client = new HttpClient())
+			using (var httpClient = new HttpClient())
 			{
-				var loadingTask = Task.Run(() => Load(client));
+				httpClient.Timeout = TimeSpan.FromSeconds(6);
+
+				var loadingTask = Task.Run(() => Load(httpClient));
 				loadingTask.Wait();
 
 				if (!loadingTask.IsCompletedSuccessfully || !loadingTask.Result)
@@ -290,8 +292,6 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Debug.Log("[SnipeTablesPreloader] Loading table " + url);
 
-			httpClient.Timeout = TimeSpan.FromSeconds(6);
-			
 			try
 			{
 				HttpResponseMessage response = null;
