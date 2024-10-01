@@ -79,7 +79,13 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			EditorGUIUtility.labelWidth = 200;
 
-			SnipeToolsConfig.LoadDefaultConfigOnBuild = EditorGUILayout.Toggle("Load Default Config On Build", SnipeToolsConfig.LoadDefaultConfigOnBuild);
+			bool loadDefaultConfig = EditorGUILayout.Toggle("Load Default Config On Build", SnipeToolsConfig.LoadDefaultConfigOnBuild);
+
+			if (loadDefaultConfig != SnipeToolsConfig.LoadDefaultConfigOnBuild)
+			{
+				SnipeToolsConfig.LoadDefaultConfigOnBuild = loadDefaultConfig;
+				SnipeToolsConfig.Save();
+			}
 			
 			EditorGUILayout.Space();
 
