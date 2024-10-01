@@ -42,7 +42,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static ConfigData _data;
+		private static ConfigData _data = new ConfigData();
 
 		private static string GetConfigFilePath()
 		{
@@ -89,7 +89,6 @@ namespace MiniIT.Snipe.Unity.Editor
 						Save();
 					}
 				}
-				return;
 			}
 
 			ConfigData data = null;
