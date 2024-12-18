@@ -1,5 +1,6 @@
 {
     "name": "MiniIT.Snipe.Tools.Editor",
+    "rootNamespace": "MiniIT.Snipe.Unity.Editor",
     "references": [
         "MiniIT.Snipe.Config",
         "MiniIT.Snipe.Unity",
