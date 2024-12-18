@@ -25,13 +25,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			else if (state == PlayModeStateChange.ExitingPlayMode)
 			{
-				AddNotOk(new Dictionary<string, object>()
-				{
-					["message_type"] = "messageType",
-					["error_code"] = "errorCode",
-					["data"] = null,
-				});
-
 				if (s_tracker != null && s_tracker.Items.Count > 0)
 				{
 					ErrorCodesHighlightWindow.ShowWindow(s_tracker);
