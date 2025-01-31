@@ -12,7 +12,9 @@ namespace MiniIT.Snipe.Unity.Editor
 {
 	public class SnipeApiDownloader : EditorWindow
 	{
-#if SNIPE_7_0_OR_NEWER
+#if SNIPE_7_1_OR_NEWER
+		private const string SNIPE_VERSION_SUFFIX = "V71";
+#elif SNIPE_7_0_OR_NEWER
 		private const string SNIPE_VERSION_SUFFIX = "V7";
 #else
 		private const string SNIPE_VERSION_SUFFIX = "V61";
@@ -39,7 +41,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				SnipeAutoUpdater.CheckUpdateAvailable();
 			}
 		}
-		
+
 		private void FindSnipeApiDirectory()
 		{
 			string[] results = AssetDatabase.FindAssets("SnipeApi");
@@ -58,7 +60,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					}
 				}
 			}
-			
+
 			if (string.IsNullOrEmpty(_directoryPath))
 			{
 				_directoryPath = Application.dataPath;
@@ -68,17 +70,17 @@ namespace MiniIT.Snipe.Unity.Editor
 		private void OnGUI()
 		{
 			EditorGUILayout.Space();
-			
+
 			EditorGUIUtility.labelWidth = 100;
 
 			SnipeToolsGUI.DrawAuthKeyWidget();
 
 			EditorGUILayout.Space();
-			
+
 			bool auth_valid = (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey) && SnipeToolsConfig.ProjectId > 0);
 
 			EditorGUI.BeginDisabledGroup(!auth_valid);
-			
+
 			EditorGUILayout.Space();
 			EditorGUILayout.Space();
 
@@ -94,9 +96,9 @@ namespace MiniIT.Snipe.Unity.Editor
 				}
 			}
 			GUILayout.EndHorizontal();
-			
+
 			EditorGUILayout.Space();
-			
+
 			EditorGUILayout.BeginHorizontal();
 
 			EditorGUI.BeginDisabledGroup(true);
@@ -124,7 +126,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		public async Task DownloadSnipeApi()
 		{
 			Debug.Log("DownloadSnipeApi - start");
-			
+
 			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			{
 				Debug.LogError("DownloadSnipeApi - FAILED to get token");
@@ -135,7 +137,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
 				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/unityBindings{SNIPE_VERSION_SUFFIX}";
-				
+
 				var response = await loader.GetAsync(url);
 
 				if (!response.IsSuccessStatusCode)
@@ -143,7 +145,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					Debug.LogError($"DownloadSnipeApi - FAILED to get token; HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
 					return;
 				}
-				
+
 				string filePath = Path.Combine(_directoryPath, SERVICE_FILE_NAME);
 
 				using (StreamWriter sw = File.CreateText(filePath))
