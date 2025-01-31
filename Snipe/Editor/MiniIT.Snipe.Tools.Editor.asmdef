@@ -1,5 +1,6 @@
 {
     "name": "MiniIT.Snipe.Tools.Editor",
+    "rootNamespace": "MiniIT.Snipe.Unity.Editor",
     "references": [
         "MiniIT.Snipe.Config",
         "MiniIT.Snipe.Unity",
@@ -20,7 +21,12 @@
         {
             "name": "com.miniit.snipe.client",
             "expression": "6.1.0",
-            "define": "SNIPE_6_1"
+            "define": "SNIPE_6_1_OR_NEWER"
+        },
+        {
+            "name": "com.miniit.snipe.client",
+            "expression": "7.0.0",
+            "define": "SNIPE_7_0_OR_NEWER"
         }
     ],
     "noEngineReferences": false
