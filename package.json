@@ -1,14 +1,13 @@
 {
   "name": "com.miniit.snipe.tools",
-  "version": "1.6.2",
-  "unity": "2022.3",
+  "version": "1.6.3",
   "dependencies": {
     "com.miniit.fastjson": "1.0.0",
     "com.cysharp.unitask": "2.3.0"
   },
   "author": {
     "name": "Mini IT",
-    "url": "http://snipe.dev"
+    "url": "https://snipe.dev"
   },
   "keywords": [
     "Snipe",
