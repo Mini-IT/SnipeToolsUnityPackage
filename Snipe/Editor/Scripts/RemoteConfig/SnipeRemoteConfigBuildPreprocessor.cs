@@ -23,7 +23,8 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] Downloading default config...");
 
-			var task = Task.Run(SnipeRemoteConfigDownloader.DownloadAndSaveDefaultConfig);
+			string targetPlatform = report.summary.platform.ToString();
+			var task = Task.Run(async () => await SnipeRemoteConfigDownloader.DownloadAndSaveDefaultConfig(targetPlatform));
 			task.Wait();
 
 			if (!task.IsCompletedSuccessfully || string.IsNullOrEmpty(task.Result))

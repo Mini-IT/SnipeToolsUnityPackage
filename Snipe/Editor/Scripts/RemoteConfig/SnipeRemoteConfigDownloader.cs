@@ -86,7 +86,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				SnipeToolsConfig.LoadDefaultConfigOnBuild = loadDefaultConfig;
 				SnipeToolsConfig.Save();
 			}
-			
+
 			EditorGUILayout.Space();
 
 			EditorGUIUtility.labelWidth = 100;
@@ -178,7 +178,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				string subPlatform = _androidSubplatform != AndriodSubPlatform.GooglePlay ? _androidSubplatform.ToString() : string.Empty;
 				return $"{_platform}{subPlatform}";
 			}
-			
+
 			if (_platform == RuntimePlatform.WebGLPlayer)
 			{
 				string subPlatform = _webglSubplatform != WebGLSubPlatform.None ? _webglSubplatform.ToString() : string.Empty;
@@ -244,11 +244,11 @@ namespace MiniIT.Snipe.Unity.Editor
 			return json;
 		}
 
-		public static async Task<string> DownloadDefaultConfig()
+		public static async Task<string> DownloadDefaultConfig(string targetPlatform = null)
 		{
 			Debug.Log("DownloadDefaultConfig - start");
 
-			string contentString = await RequestDefaultConfig();
+			string contentString = await RequestDefaultConfig(targetPlatform);
 
 			if (string.IsNullOrEmpty(contentString))
 			{
@@ -273,19 +273,24 @@ namespace MiniIT.Snipe.Unity.Editor
 			return json;
 		}
 
-		public static async Task<string> DownloadAndSaveDefaultConfig()
+		public static async Task<string> DownloadAndSaveDefaultConfig(string targetPlatform)
 		{
-			string json = await DownloadDefaultConfig();
+			string json = await DownloadDefaultConfig(targetPlatform);
 			return await CheckAndSaveLoadedConfig(json);
 		}
 
-		private static async Task<string> RequestDefaultConfig()
+		private static async Task<string> RequestDefaultConfig(string targetPlatform)
 		{
 			using (var loader = new HttpClient())
 			{
 				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/clientConfigDefaultStrings";
 				loader.Timeout = TimeSpan.FromSeconds(10);
+
+				string url = string.IsNullOrEmpty(targetPlatform)
+					? $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/clientConfigDefaultStrings"
+					: $"https://config.snipe.dev/api/v1/buildConfigStrings/{SnipeToolsConfig.ProjectStringID}/{GetPlaftomString(targetPlatform)}";
+
+				Debug.Log("Download config: " + url);
 
 				var response = await loader.GetAsync(url);
 
@@ -297,6 +302,31 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				return await response.Content.ReadAsStringAsync();
 			}
+		}
+
+		private static string GetPlaftomString(string targetPlatform)
+		{
+			return targetPlatform + GetPlatformSuffix();
+		}
+
+		private static string GetPlatformSuffix()
+		{
+#if AMAZON_STORE
+			return "Amazon";
+#elif RUSTORE
+			return "RuStore";
+#elif NUTAKU
+			return "Nutaku";
+#elif HUAWEI
+			return "Huawei";
+#elif YANDEX
+			return "Yandex";
+//#elif CHINA
+//			return "China";
+#elif STEAM || MINIIT_STEAM || UNITY_STEAM
+			return "Steam";
+#endif
+			return string.Empty;
 		}
 	}
 }
