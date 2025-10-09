@@ -43,7 +43,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		private static string GetPlatformString(BuildTarget targetPlatform)
 		{
 #if STEAM || MINIIT_STEAM || UNITY_STEAM
-			return "Steam";
+			return "steam";
 #endif
 
 			switch (targetPlatform)
