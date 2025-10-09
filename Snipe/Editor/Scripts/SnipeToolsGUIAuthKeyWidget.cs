@@ -34,6 +34,11 @@ namespace MiniIT.Snipe.Unity.Editor
 				SnipeToolsConfig.Save();
 			}
 
+			if (string.IsNullOrWhiteSpace(SnipeToolsConfig.ProjectStringID))
+			{
+				EditorGUILayout.HelpBox("You must specify a valid project stringID", MessageType.Error);
+			}
+
 			return projectStringID;
 		}
 	}

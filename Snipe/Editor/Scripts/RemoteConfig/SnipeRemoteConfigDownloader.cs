@@ -91,16 +91,14 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			EditorGUIUtility.labelWidth = 100;
 
+			SnipeToolsGUI.DrawProjectStringIDWidget();
+
+			EditorGUILayout.Space();
+
 			if (SnipeToolsConfig.LoadDefaultConfigOnBuild)
 			{
 				SnipeToolsGUI.DrawAuthKeyWidget();
 			}
-			else
-			{
-				SnipeToolsGUI.DrawProjectStringIDWidget();
-			}
-
-			EditorGUILayout.Space();
 
 			if (!SnipeToolsConfig.LoadDefaultConfigOnBuild)
 			{
@@ -152,6 +150,8 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			else
 			{
+				EditorGUILayout.Space();
+
 				EditorGUILayout.BeginHorizontal();
 
 				GUILayout.FlexibleSpace();
