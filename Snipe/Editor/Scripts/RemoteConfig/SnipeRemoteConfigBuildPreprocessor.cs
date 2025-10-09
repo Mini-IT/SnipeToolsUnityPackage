@@ -97,7 +97,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					return "xboxone";
 
 				default:
-					return targetPlatform.ToString();
+					return targetPlatform.ToString().ToLowerInvariant();
 			}
 		}
 	}
