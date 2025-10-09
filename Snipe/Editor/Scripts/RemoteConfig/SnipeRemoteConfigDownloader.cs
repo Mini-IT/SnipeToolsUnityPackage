@@ -288,7 +288,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				string url = string.IsNullOrEmpty(targetPlatform)
 					? $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/clientConfigDefaultStrings"
-					: $"https://config.snipe.dev/api/v1/buildConfigStrings/{SnipeToolsConfig.ProjectStringID}/{GetPlaftomString(targetPlatform)}";
+					: $"https://config.snipe.dev/api/v1/buildConfigStrings/{SnipeToolsConfig.ProjectStringID}/{targetPlatform}";
 
 				Debug.Log("Download config: " + url);
 
@@ -302,31 +302,6 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				return await response.Content.ReadAsStringAsync();
 			}
-		}
-
-		private static string GetPlaftomString(string targetPlatform)
-		{
-			return targetPlatform + GetPlatformSuffix();
-		}
-
-		private static string GetPlatformSuffix()
-		{
-#if AMAZON_STORE
-			return "Amazon";
-#elif RUSTORE
-			return "RuStore";
-#elif NUTAKU
-			return "Nutaku";
-#elif HUAWEI
-			return "Huawei";
-#elif YANDEX
-			return "Yandex";
-//#elif CHINA
-//			return "China";
-#elif STEAM || MINIIT_STEAM || UNITY_STEAM
-			return "Steam";
-#endif
-			return string.Empty;
 		}
 	}
 }

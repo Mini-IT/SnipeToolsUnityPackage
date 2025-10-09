@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -23,7 +24,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] Downloading default config...");
 
-			string targetPlatform = report.summary.platform.ToString();
+			string targetPlatform = GetPlatformString(report.summary.platform);
 			var task = Task.Run(async () => await SnipeRemoteConfigDownloader.DownloadAndSaveDefaultConfig(targetPlatform));
 			task.Wait();
 
@@ -37,6 +38,67 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			Debug.Log($"[{nameof(SnipeRemoteConfigBuildPreprocessor)}] OnPreprocessBuild - Finished");
+		}
+
+		private static string GetPlatformString(BuildTarget targetPlatform)
+		{
+#if STEAM || MINIIT_STEAM || UNITY_STEAM
+			return "Steam";
+#endif
+
+			switch (targetPlatform)
+			{
+				case BuildTarget.Android:
+#if AMAZON_STORE
+					return "amazon";
+#elif RUSTORE
+					return "rustore";
+#elif NUTAKU
+					return "androidNutaku";
+#elif HUAWEI
+					return "huawei";
+#else
+					return "android";
+#endif
+
+				case BuildTarget.iOS:
+					return "ios";
+
+				case BuildTarget.StandaloneLinux64:
+					return "linux";
+
+				case BuildTarget.StandaloneOSX:
+					return "macos";
+
+				case BuildTarget.StandaloneWindows:
+				case BuildTarget.StandaloneWindows64:
+				case BuildTarget.WSAPlayer:
+					return "windows";
+
+				case BuildTarget.WebGL:
+#if YANDEX
+					return "webglYandex";
+#elif NUTAKU
+					return "webglNutaku";
+#else
+					return "webgl";
+#endif
+
+				case BuildTarget.PS4:
+					return "ps4";
+				case BuildTarget.PS5:
+					return "ps5";
+				case BuildTarget.Switch:
+					return "switch";
+
+				case BuildTarget.XboxOne:
+				case BuildTarget.GameCoreXboxOne:
+				case BuildTarget.GameCoreXboxSeries:
+					return "xboxone";
+
+				default:
+					return targetPlatform.ToString();
+			}
 		}
 	}
 }
