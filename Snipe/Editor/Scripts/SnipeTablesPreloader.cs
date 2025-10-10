@@ -198,7 +198,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Debug.Log($"[SnipeTablesPreloader] Fetching projects list");
 
-			string projectStringID = FetchProjectID(httpClient);
+			string projectStringID = SnipeToolsConfig.GetProjectStringID();
 			if (string.IsNullOrEmpty(projectStringID))
 			{
 				return false;
@@ -235,31 +235,31 @@ namespace MiniIT.Snipe.Unity.Editor
 			return true;
 		}
 
-		private static string FetchProjectID(HttpClient httpClient)
-		{
-			string projectStringID;
-
-			try
-			{
-				httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/stringID";
-				var content = httpClient.GetStringAsync(url).Result;
-
-				Debug.Log($"[SnipeTablesPreloader] {content}");
-
-				var responseData = fastJSON.JSON.ToObject<ProjectStringIdResponseData>(content);
-				projectStringID = responseData.stringID;
-				Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {responseData.errorCode}");
-				Debug.Log($"[SnipeTablesPreloader] Project StringID = {projectStringID}");
-			}
-			catch (Exception e)
-			{
-				Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch projects list: {e}");
-				return null;
-			}
-
-			return projectStringID;
-		}
+		// private static string FetchProjectID(HttpClient httpClient)
+		// {
+		// 	string projectStringID;
+		//
+		// 	try
+		// 	{
+		// 		httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
+		// 		string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/stringID";
+		// 		var content = httpClient.GetStringAsync(url).Result;
+		//
+		// 		Debug.Log($"[SnipeTablesPreloader] {content}");
+		//
+		// 		var responseData = fastJSON.JSON.ToObject<ProjectStringIdResponseData>(content);
+		// 		projectStringID = responseData.stringID;
+		// 		Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {responseData.errorCode}");
+		// 		Debug.Log($"[SnipeTablesPreloader] Project StringID = {projectStringID}");
+		// 	}
+		// 	catch (Exception e)
+		// 	{
+		// 		Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch projects list: {e}");
+		// 		return null;
+		// 	}
+		//
+		// 	return projectStringID;
+		// }
 
 		private static void ParseVersions(string json)
 		{
@@ -408,13 +408,6 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			public string name;
 			public long version;
-		}
-
-		[System.Serializable]
-		internal class ProjectStringIdResponseData
-		{
-			public string errorCode;
-			public string stringID;
 		}
 
 	}

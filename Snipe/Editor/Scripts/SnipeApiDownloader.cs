@@ -77,11 +77,21 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			SnipeToolsGUI.DrawAuthKeyWidget();
 
-			EditorGUILayout.Space();
+			//bool authValid = (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey) && SnipeToolsConfig.ProjectId > 0);
+			// if (!SnipeToolsConfig.Initialized || !authValid)
+			// {
+			// 	EditorGUILayout.HelpBox("Settings not filled", MessageType.Error);
+			// 	if (GUILayout.Button("Go to Settings..."))
+			// 	{
+			// 		SnipeToolsSettingsWindow.ShowWindow();
+			// 		Close();
+			// 	}
+			//
+			// 	EditorGUILayout.Space();
+			// }
 
-			bool auth_valid = (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey) && SnipeToolsConfig.ProjectId > 0);
 
-			EditorGUI.BeginDisabledGroup(!auth_valid);
+			EditorGUI.BeginDisabledGroup(!SnipeToolsConfig.IsAuthKeyValid);
 
 			EditorGUILayout.Space();
 			EditorGUILayout.Space();
