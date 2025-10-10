@@ -2,6 +2,8 @@
 
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
@@ -35,27 +37,98 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private void OnGUI()
+		private void OnGUI() { }
+
+		public void CreateGUI()
 		{
-			if (_tracker == null)
+			var root = rootVisualElement;
+			var baseStyle = LoadStyleSheet("base");
+			if (baseStyle != null)
 			{
-				return;
+				root.styleSheets.Add(baseStyle);
 			}
 
-			EditorGUILayout.BeginVertical();
-
-			foreach (var msg in _groupedMessages)
+			var tree = LoadUxml("ErrorCodesHighlightWindow");
+			if (tree != null)
 			{
-				EditorGUILayout.Foldout(true, $"{msg.Key} ({msg.Value.Count})", true);
-				EditorGUI.indentLevel++;
-				foreach (string item in msg.Value)
+				tree.CloneTree(root);
+			}
+
+			var search = root.Q<ToolbarSearchField>("search");
+			var groupsList = root.Q<ListView>("groups");
+			var itemsList = root.Q<ListView>("items");
+
+			var groups = new List<string>(_groupedMessages.Keys);
+			groupsList.itemsSource = groups;
+			groupsList.makeItem = () => new Label();
+			groupsList.bindItem = (e, i) => ((Label)e).text = $"{groups[i]} ({_groupedMessages[groups[i]].Count})";
+			groupsList.onSelectionChange += selected =>
+			{
+				foreach (var obj in selected)
 				{
-					EditorGUILayout.TextField(item);
+					if (obj is string key)
+					{
+						SetItems(itemsList, _groupedMessages[key]);
+					}
+					break;
 				}
-				EditorGUI.indentLevel++;
-			}
+			};
 
-			EditorGUILayout.EndVertical();
+			SetItems(itemsList, groups.Count > 0 ? _groupedMessages[groups[0]] : null);
+
+			search.RegisterValueChangedCallback(evt =>
+			{
+				string term = evt.newValue?.Trim();
+				if (string.IsNullOrEmpty(term))
+				{
+					groupsList.itemsSource = groups;
+					groupsList.Rebuild();
+					return;
+				}
+				var filtered = new List<string>();
+				foreach (var g in groups)
+				{
+					if (g.IndexOf(term, System.StringComparison.OrdinalIgnoreCase) >= 0)
+					{
+						filtered.Add(g);
+					}
+				}
+				groupsList.itemsSource = filtered;
+				groupsList.Rebuild();
+			});
+		}
+
+		private static void SetItems(ListView list, System.Collections.Generic.List<string> items)
+		{
+			items ??= new System.Collections.Generic.List<string>();
+			list.itemsSource = items;
+			list.makeItem = () => new TextField() { isReadOnly = true };
+			list.bindItem = (e, i) => ((TextField)e).value = items[i];
+			list.Rebuild();
+		}
+
+		private static VisualTreeAsset LoadUxml(string fileStem)
+		{
+			string filter = fileStem + " t:VisualTreeAsset";
+			var guids = AssetDatabase.FindAssets(filter);
+			if (guids != null && guids.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
+			}
+			return null;
+		}
+
+		private static StyleSheet LoadStyleSheet(string fileStem)
+		{
+			string filter = fileStem + " t:StyleSheet";
+			var guids = AssetDatabase.FindAssets(filter);
+			if (guids != null && guids.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+			}
+			return null;
 		}
 	}
 }

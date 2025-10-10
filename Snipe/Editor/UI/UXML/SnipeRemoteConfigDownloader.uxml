@@ -1,0 +1,37 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+  <ui:VisualElement class="root">
+    <MiniIT.Snipe.Unity.Editor.AuthKeyWidget />
+
+    <ui:VisualElement class="spacer" />
+
+    <ui:Toggle name="load-default" label="Load Default Config On Build" />
+
+    <ui:VisualElement class="spacer" />
+
+    <ui:VisualElement name="custom-config-section">
+      <ui:TextField name="app-identifier" label="App Identifier" />
+      <ui:TextField name="app-version" label="App Version" />
+      <uie:EnumField name="platform" label="Platform" />
+      <uie:EnumField name="android-subplatform" label="SubPlatform (Android)" />
+      <uie:EnumField name="webgl-subplatform" label="SubPlatform (WebGL)" />
+      <ui:VisualElement class="row">
+        <ui:VisualElement style="flex-grow:1" />
+        <ui:Button name="download-platform" text="Download" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="default-config-section">
+      <ui:VisualElement class="row">
+        <ui:VisualElement style="flex-grow:1" />
+        <ui:Button name="download-default" text="Download Default" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement class="spacer" />
+
+    <ui:ScrollView name="content-scroll" style="flex-grow:1">
+      <ui:TextField name="content" multiline="true" />
+    </ui:ScrollView>
+  </ui:VisualElement>
+</ui:UXML>
+

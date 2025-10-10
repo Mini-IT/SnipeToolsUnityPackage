@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+  <ui:VisualElement class="root">
+    <ui:Toolbar>
+      <ui:ToolbarSearchField name="search" />
+    </ui:Toolbar>
+    <ui:Foldout name="groups-foldout" text="Groups">
+      <ui:ListView name="groups" />
+    </ui:Foldout>
+    <ui:Foldout name="items-foldout" text="Items">
+      <ui:ListView name="items" />
+    </ui:Foldout>
+  </ui:VisualElement>
+</ui:UXML>
+

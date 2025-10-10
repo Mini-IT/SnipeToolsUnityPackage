@@ -6,6 +6,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 using UnityEngine;
 
 using Debug = UnityEngine.Debug;
@@ -73,106 +75,164 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private void OnGUI()
+		private void OnGUI() { }
+
+		public void CreateGUI()
 		{
-			EditorGUILayout.Space();
+			SnipeToolsConfig.Load();
 
-			EditorGUIUtility.labelWidth = 100;
-
-			SnipeToolsGUI.DrawAuthKeyWidget();
-
-			EditorGUIUtility.labelWidth = 200;
-
-			EditorGUILayout.Space();
-
-			bool loadDefaultConfig = EditorGUILayout.Toggle("Load Default Config On Build", SnipeToolsConfig.LoadDefaultConfigOnBuild);
-
-			if (loadDefaultConfig != SnipeToolsConfig.LoadDefaultConfigOnBuild)
+			var root = rootVisualElement;
+			var baseStyle = LoadStyleSheet("base");
+			if (baseStyle != null)
 			{
-				SnipeToolsConfig.LoadDefaultConfigOnBuild = loadDefaultConfig;
-				SnipeToolsConfig.Save();
+				root.styleSheets.Add(baseStyle);
 			}
 
-			EditorGUIUtility.labelWidth = 100;
-
-			// SnipeToolsGUI.DrawProjectStringIDWidget();
-
-			EditorGUILayout.Space();
-
-			// if (SnipeToolsConfig.LoadDefaultConfigOnBuild)
-			// {
-			// 	SnipeToolsGUI.DrawAuthKeyWidget();
-			// }
-
-			if (!SnipeToolsConfig.LoadDefaultConfigOnBuild)
+			var tree = LoadUxml("SnipeRemoteConfigDownloader");
+			if (tree != null)
 			{
-				_appInfo.ApplicationIdentifier = EditorGUILayout.TextField("App Identifier", _appInfo.ApplicationIdentifier);
-				_appInfo.ApplicationVersion = EditorGUILayout.TextField("App Version", _appInfo.ApplicationVersion);
+				tree.CloneTree(root);
+			}
 
-				var platform = (RuntimePlatform)EditorGUILayout.EnumPopup("Platform", _platform);
-				var androidSubplatform = _androidSubplatform;
-				var webglSubplatform = _webglSubplatform;
+			var toggleLoadDefault = root.Q<Toggle>("load-default");
+			var sectionCustom = root.Q<VisualElement>("custom-config-section");
+			var sectionDefault = root.Q<VisualElement>("default-config-section");
+			var appIdField = root.Q<TextField>("app-identifier");
+			var appVersionField = root.Q<TextField>("app-version");
+			var platformField = root.Q<EnumField>("platform");
+			var androidSubField = root.Q<EnumField>("android-subplatform");
+			var webglSubField = root.Q<EnumField>("webgl-subplatform");
+			var downloadPlatformButton = root.Q<Button>("download-platform");
+			var downloadDefaultButton = root.Q<Button>("download-default");
+			var contentField = root.Q<TextField>("content");
 
-				if (platform == RuntimePlatform.Android)
-				{
-					androidSubplatform = (AndriodSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _androidSubplatform);
-					webglSubplatform = WebGLSubPlatform.None;
-				}
-				else if (platform == RuntimePlatform.WebGLPlayer)
-				{
-					androidSubplatform = AndriodSubPlatform.GooglePlay;
-					webglSubplatform = (WebGLSubPlatform)EditorGUILayout.EnumPopup("SubPlatform", _webglSubplatform);
-				}
-				else
-				{
-					androidSubplatform = AndriodSubPlatform.GooglePlay;
-					webglSubplatform = WebGLSubPlatform.None;
-				}
+			contentField.isReadOnly = true;
+			contentField.multiline = true;
 
-				if (_platform != platform || _androidSubplatform != androidSubplatform || _webglSubplatform != webglSubplatform)
-				{
-					_platform = platform;
-					_androidSubplatform = androidSubplatform;
-					_webglSubplatform = webglSubplatform;
-					_appInfo.ApplicationPlatform = GetPlaftomString();
-				}
+			toggleLoadDefault.value = SnipeToolsConfig.LoadDefaultConfigOnBuild;
+			toggleLoadDefault.RegisterValueChangedCallback(evt =>
+			{
+				SnipeToolsConfig.LoadDefaultConfigOnBuild = evt.newValue;
+				SnipeToolsConfig.Save();
+				UpdateSectionsVisibility(sectionCustom, sectionDefault, evt.newValue);
+				UpdateButtonsState(downloadPlatformButton, downloadDefaultButton);
+			});
 
-				EditorGUILayout.Space();
+			appIdField.value = _appInfo.ApplicationIdentifier;
+			appIdField.RegisterValueChangedCallback(evt => _appInfo.ApplicationIdentifier = evt.newValue);
+			appVersionField.value = _appInfo.ApplicationVersion;
+			appVersionField.RegisterValueChangedCallback(evt => _appInfo.ApplicationVersion = evt.newValue);
 
-				EditorGUILayout.BeginHorizontal();
+			platformField.Init(_platform);
+			androidSubField.Init(_androidSubplatform);
+			webglSubField.Init(_webglSubplatform);
 
-				GUILayout.FlexibleSpace();
+			platformField.RegisterValueChangedCallback(evt =>
+			{
+				_platform = (RuntimePlatform)evt.newValue;
+				UpdateSubplatformVisibility(platformField, androidSubField, webglSubField);
+				UpdateAppInfoPlatform();
+			});
 
-				//EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(SnipeToolsConfig.ProjectStringID));
-				if (GUILayout.Button($"Download {_appInfo.ApplicationPlatform}"))
-				{
-					OnDownloadButtonPressed();
-				}
-				//EditorGUI.EndDisabledGroup();
+			androidSubField.RegisterValueChangedCallback(evt =>
+			{
+				_androidSubplatform = (AndriodSubPlatform)evt.newValue;
+				UpdateAppInfoPlatform();
+			});
 
-				EditorGUILayout.EndHorizontal();
+			webglSubField.RegisterValueChangedCallback(evt =>
+			{
+				_webglSubplatform = (WebGLSubPlatform)evt.newValue;
+				UpdateAppInfoPlatform();
+			});
+
+			downloadPlatformButton.clicked += OnDownloadButtonPressed;
+			downloadDefaultButton.clicked += OnDownloadDefaultButtonPressed;
+
+			UpdateSectionsVisibility(sectionCustom, sectionDefault, SnipeToolsConfig.LoadDefaultConfigOnBuild);
+			UpdateSubplatformVisibility(platformField, androidSubField, webglSubField);
+			UpdateButtonsState(downloadPlatformButton, downloadDefaultButton);
+			RenderContent(contentField);
+		}
+
+		private void UpdateSectionsVisibility(VisualElement sectionCustom, VisualElement sectionDefault, bool loadDefault)
+		{
+			sectionCustom.style.display = loadDefault ? DisplayStyle.None : DisplayStyle.Flex;
+			sectionDefault.style.display = loadDefault ? DisplayStyle.Flex : DisplayStyle.None;
+		}
+
+		private void UpdateSubplatformVisibility(EnumField platformField, EnumField androidSubField, EnumField webglSubField)
+		{
+			if (_platform == RuntimePlatform.Android)
+			{
+				androidSubField.style.display = DisplayStyle.Flex;
+				webglSubField.style.display = DisplayStyle.None;
+			}
+			else if (_platform == RuntimePlatform.WebGLPlayer)
+			{
+				androidSubField.style.display = DisplayStyle.None;
+				webglSubField.style.display = DisplayStyle.Flex;
 			}
 			else
 			{
-				EditorGUILayout.Space();
+				androidSubField.style.display = DisplayStyle.None;
+				webglSubField.style.display = DisplayStyle.None;
+			}
+		}
 
-				EditorGUILayout.BeginHorizontal();
+		private void UpdateButtonsState(Button downloadPlatformButton, Button downloadDefaultButton)
+		{
+			bool authValid = !string.IsNullOrWhiteSpace(SnipeToolsConfig.AuthKey);
+			downloadDefaultButton.SetEnabled(authValid);
+			downloadPlatformButton.SetEnabled(true);
+		}
 
-				GUILayout.FlexibleSpace();
+		private void RenderContent(TextField contentField)
+		{
+			contentField.value = _content ?? string.Empty;
+		}
 
-				EditorGUI.BeginDisabledGroup(string.IsNullOrWhiteSpace(SnipeToolsConfig.AuthKey));
-				if (GUILayout.Button("Download Default"))
-				{
-					OnDownloadDefaultButtonPressed();
-				}
-				EditorGUI.EndDisabledGroup();
-
-				EditorGUILayout.EndHorizontal();
+		private void UpdateAppInfoPlatform()
+		{
+			if (_platform == RuntimePlatform.Android)
+			{
+				_webglSubplatform = WebGLSubPlatform.None;
+			}
+			else if (_platform == RuntimePlatform.WebGLPlayer)
+			{
+				_androidSubplatform = AndriodSubPlatform.GooglePlay;
+			}
+			else
+			{
+				_androidSubplatform = AndriodSubPlatform.GooglePlay;
+				_webglSubplatform = WebGLSubPlatform.None;
 			}
 
-			_contentScrollPosition = EditorGUILayout.BeginScrollView(_contentScrollPosition, GUILayout.ExpandHeight(true));
-			GUILayout.TextArea(_content);
-			EditorGUILayout.EndScrollView();
+			_appInfo.ApplicationPlatform = GetPlaftomString();
+		}
+
+		private static VisualTreeAsset LoadUxml(string fileStem)
+		{
+			string filter = fileStem + " t:VisualTreeAsset";
+			var guids = AssetDatabase.FindAssets(filter);
+			if (guids != null && guids.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
+			}
+			return null;
+		}
+
+		private static StyleSheet LoadStyleSheet(string fileStem)
+		{
+			string filter = fileStem + " t:StyleSheet";
+			var guids = AssetDatabase.FindAssets(filter);
+			if (guids != null && guids.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+			}
+			return null;
 		}
 
 		private string GetPlaftomString()

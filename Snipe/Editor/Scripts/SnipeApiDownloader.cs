@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using UnityEditor;
+using UnityEngine.UIElements;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -32,17 +33,17 @@ namespace MiniIT.Snipe.Unity.Editor
 			EditorWindow.GetWindow<SnipeApiDownloader>("SnipeApi");
 		}
 
-		protected void OnEnable()
-		{
-			SnipeToolsConfig.Load();
-
-			FindSnipeApiDirectory();
-
-			if (SnipeAutoUpdater.AutoUpdateEnabled)
-			{
-				SnipeAutoUpdater.CheckUpdateAvailable();
-			}
-		}
+		// protected void OnEnable()
+		// {
+		// 	SnipeToolsConfig.Load();
+		//
+		// 	FindSnipeApiDirectory();
+		//
+		// 	if (SnipeAutoUpdater.AutoUpdateEnabled)
+		// 	{
+		// 		SnipeAutoUpdater.CheckUpdateAvailable();
+		// 	}
+		// }
 
 		private void FindSnipeApiDirectory()
 		{
@@ -69,62 +70,92 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private void OnGUI()
+		public void CreateGUI()
 		{
-			EditorGUILayout.Space();
+			SnipeToolsConfig.Load();
 
-			EditorGUIUtility.labelWidth = 100;
+			FindSnipeApiDirectory();
 
-			SnipeToolsGUI.DrawAuthKeyWidget();
+			if (SnipeAutoUpdater.AutoUpdateEnabled)
+			{
+				SnipeAutoUpdater.CheckUpdateAvailable();
+			}
 
-			//bool authValid = (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey) && SnipeToolsConfig.ProjectId > 0);
-			// if (!SnipeToolsConfig.Initialized || !authValid)
-			// {
-			// 	EditorGUILayout.HelpBox("Settings not filled", MessageType.Error);
-			// 	if (GUILayout.Button("Go to Settings..."))
-			// 	{
-			// 		SnipeToolsSettingsWindow.ShowWindow();
-			// 		Close();
-			// 	}
-			//
-			// 	EditorGUILayout.Space();
-			// }
+			//-------
 
+			var root = rootVisualElement;
+			var baseStyle = LoadStyleSheet("base");
+			if (baseStyle != null)
+			{
+				root.styleSheets.Add(baseStyle);
+			}
 
-			EditorGUI.BeginDisabledGroup(!SnipeToolsConfig.IsAuthKeyValid);
+			var tree = LoadUxml("SnipeApiDownloader");
+			if (tree != null)
+			{
+				tree.CloneTree(root);
+			}
 
-			EditorGUILayout.Space();
-			EditorGUILayout.Space();
+			var directoryField = root.Q<TextField>("directory");
+			var browseButton = root.Q<Button>("browse");
+			var versionLabel = root.Q<Label>("version-label");
+			var downloadButton = root.Q<Button>("download");
 
-			GUILayout.BeginHorizontal();
-			_directoryPath = EditorGUILayout.TextField("Directory", _directoryPath);
-			if (GUILayout.Button("...", GUILayout.Width(40)))
+			versionLabel.text = "Snipe API Service Version: " + SNIPE_VERSION_SUFFIX;
+
+			directoryField.value = string.IsNullOrEmpty(_directoryPath) ? Application.dataPath : _directoryPath;
+			directoryField.RegisterValueChangedCallback(evt => _directoryPath = evt.newValue);
+
+			browseButton.clicked += () =>
 			{
 				string filename = SERVICE_FILE_NAME;
 				string path = EditorUtility.SaveFolderPanel($"Choose location of {filename}", _directoryPath, "");
 				if (!string.IsNullOrEmpty(path))
 				{
 					_directoryPath = path;
+					directoryField.value = path;
 				}
-			}
-			GUILayout.EndHorizontal();
+			};
 
-			EditorGUILayout.Space();
+			UpdateInteractable(root);
 
-			EditorGUILayout.BeginHorizontal();
+			downloadButton.clicked += () => DownloadSnipeApiAndClose();
+		}
 
-			EditorGUI.BeginDisabledGroup(true);
-			GUILayout.Label("Snipe API Service Version: " + SNIPE_VERSION_SUFFIX);
-			EditorGUI.EndDisabledGroup();
+		private void UpdateInteractable(VisualElement root)
+		{
+			bool enabled = SnipeToolsConfig.IsAuthKeyValid;
+			var directoryField = root.Q<TextField>("directory");
+			var browseButton = root.Q<Button>("browse");
+			var downloadButton = root.Q<Button>("download");
 
-			GUILayout.FlexibleSpace();
+			if (directoryField != null) directoryField.SetEnabled(enabled);
+			if (browseButton != null) browseButton.SetEnabled(enabled);
+			if (downloadButton != null) downloadButton.SetEnabled(enabled);
+		}
 
-			if (GUILayout.Button("Download"))
+		private static VisualTreeAsset LoadUxml(string fileStem)
+		{
+			string filter = fileStem + " t:VisualTreeAsset";
+			var guids = AssetDatabase.FindAssets(filter);
+			if (guids != null && guids.Length > 0)
 			{
-				DownloadSnipeApiAndClose();
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
 			}
-			EditorGUILayout.EndHorizontal();
-			EditorGUI.EndDisabledGroup();
+			return null;
+		}
+
+		private static StyleSheet LoadStyleSheet(string fileStem)
+		{
+			string filter = fileStem + " t:StyleSheet";
+			var guids = AssetDatabase.FindAssets(filter);
+			if (guids != null && guids.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+			}
+			return null;
 		}
 
 		private async void DownloadSnipeApiAndClose()

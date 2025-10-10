@@ -8,6 +8,8 @@ using UnityEditor.PackageManager.Requests;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
@@ -41,57 +43,84 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		void OnGUI()
+		void OnGUI() { }
+
+		public void CreateGUI()
 		{
-			if (mPackageListRequest != null || mBranches == null || mTags == null || SnipePackageVersions == null)
+			var root = rootVisualElement;
+			var baseStyle = LoadStyleSheet("base");
+			if (baseStyle != null)
 			{
-				EditorGUILayout.LabelField("Fetching... please wait...");
+				root.styleSheets.Add(baseStyle);
 			}
-			else if (mPackageAddRequest != null)
+
+			var tree = LoadUxml("SnipeUpdater");
+			if (tree != null)
 			{
-				EditorGUILayout.LabelField("Installing... please wait...");
+				tree.CloneTree(root);
 			}
-			else
+
+			var btnUpdateTools = root.Q<Button>("update-tools");
+			var btnFetchVersions = root.Q<Button>("fetch-versions");
+			var statusLabel = root.Q<Label>("status");
+			var currentVersionLabel = root.Q<Label>("current-version");
+			var versionsPopup = root.Q<PopupField<string>>("versions");
+			var btnSwitchUpdate = root.Q<Button>("switch-update");
+
+			btnUpdateTools.clicked += async () =>
 			{
-				GUILayout.BeginHorizontal();
-				if (GUILayout.Button("Update Snipe Tools Package"))
+				statusLabel.text = "Installing... please wait...";
+				var request = InstallSnipeToolsPackage();
+				while (!request.IsCompleted)
 				{
-					var request = InstallSnipeToolsPackage();
-					while (!request.IsCompleted)
-					{
-					}
-					if (request.Status == StatusCode.Success)
-					{
-						this.Close();
-					}
+					await Task.Delay(50);
 				}
-
-				if (GUILayout.Button("Fetch Versions"))
+				statusLabel.text = request.Status == StatusCode.Success ? "Installed" : "Install error";
+				if (request.Status == StatusCode.Success)
 				{
-					_ = FetchVersionsList();
+					this.Close();
 				}
-				GUILayout.EndHorizontal();
+			};
 
-				if (SnipePackageVersions != null)
+			btnFetchVersions.clicked += async () =>
+			{
+				statusLabel.text = "Fetching... please wait...";
+				await FetchVersionsList();
+				statusLabel.text = string.Empty;
+				RefreshUI(currentVersionLabel, versionsPopup);
+			};
+
+			btnSwitchUpdate.clicked += () =>
+			{
+				if (mSelectedSnipePackageVersionIndex >= 0 && SnipePackageVersions != null)
 				{
-					string current_version_name = CurrentSnipePackageVersionIndex >= 0 ? SnipePackageVersions[CurrentSnipePackageVersionIndex] : "unknown";
-					EditorGUILayout.LabelField($"Current version (detected): {current_version_name}");
-
-					GUILayout.BeginHorizontal();
-					EditorGUILayout.LabelField("Version: ");
-					mSelectedSnipePackageVersionIndex = EditorGUILayout.Popup(mSelectedSnipePackageVersionIndex, SnipePackageVersions);
-
-					GUILayout.FlexibleSpace();
-					if (mSelectedSnipePackageVersionIndex >= 0 && GUILayout.Button("Switch / Update"))
-					{
-						string selected_version = SnipePackageVersions[mSelectedSnipePackageVersionIndex];
-						string version_id = (selected_version == "master") ? "" : $"{selected_version}";
-
-						InstallSnipePackage(version_id);
-					}
-					GUILayout.EndHorizontal();
+					string selected_version = SnipePackageVersions[mSelectedSnipePackageVersionIndex];
+					string version_id = (selected_version == "master") ? "" : $"{selected_version}";
+					InstallSnipePackage(version_id);
 				}
+			};
+
+			RefreshUI(currentVersionLabel, versionsPopup);
+		}
+
+		private void RefreshUI(Label currentVersionLabel, PopupField<string> versionsPopup)
+		{
+			if (SnipePackageVersions == null)
+			{
+				currentVersionLabel.text = "unknown";
+				versionsPopup.choices = new List<string>();
+				versionsPopup.index = -1;
+				return;
 			}
+
+			string current_version_name = CurrentSnipePackageVersionIndex >= 0 ? SnipePackageVersions[CurrentSnipePackageVersionIndex] : "unknown";
+			currentVersionLabel.text = current_version_name;
+			versionsPopup.choices = new List<string>(SnipePackageVersions);
+			versionsPopup.index = mSelectedSnipePackageVersionIndex;
+			versionsPopup.RegisterValueChangedCallback(evt =>
+			{
+				mSelectedSnipePackageVersionIndex = versionsPopup.index;
+			});
 		}
 
 		internal static void InstallSnipePackage(string version)
@@ -248,6 +277,30 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			InstalledPackagesListFetched?.Invoke(installedPackages);
+		}
+
+		private static VisualTreeAsset LoadUxml(string fileStem)
+		{
+			string filter = fileStem + " t:VisualTreeAsset";
+			var guids = AssetDatabase.FindAssets(filter);
+			if (guids != null && guids.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
+			}
+			return null;
+		}
+
+		private static StyleSheet LoadStyleSheet(string fileStem)
+		{
+			string filter = fileStem + " t:StyleSheet";
+			var guids = AssetDatabase.FindAssets(filter);
+			if (guids != null && guids.Length > 0)
+			{
+				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+				return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+			}
+			return null;
 		}
 	}
 
