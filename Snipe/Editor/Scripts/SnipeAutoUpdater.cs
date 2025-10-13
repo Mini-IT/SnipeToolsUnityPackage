@@ -92,14 +92,14 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Debug.Log("[SnipeAutoUpdater] CheckUpdateAvailable");
 
-			SnipeUpdater.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
-			SnipeUpdater.InstalledPackagesListFetched += OnInstalledPackagesListFetched;
-			await SnipeUpdater.FetchVersionsList();
+			SnipeUpdateWindow.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
+			SnipeUpdateWindow.InstalledPackagesListFetched += OnInstalledPackagesListFetched;
+			await SnipeUpdateWindow.FetchVersionsList();
 
-			if (SnipeUpdater.SnipePackageVersions != null && SnipeUpdater.SnipePackageVersions.Length > 0)
+			if (SnipeUpdateWindow.SnipePackageVersions != null && SnipeUpdateWindow.SnipePackageVersions.Length > 0)
 			{
-				string currentVersionCode = SnipeUpdater.CurrentSnipePackageVersionIndex >= 0 ?
-					SnipeUpdater.SnipePackageVersions[SnipeUpdater.CurrentSnipePackageVersionIndex] :
+				string currentVersionCode = SnipeUpdateWindow.CurrentSnipePackageVersionIndex >= 0 ?
+					SnipeUpdateWindow.SnipePackageVersions[SnipeUpdateWindow.CurrentSnipePackageVersionIndex] :
 					"unknown";
 
 				Debug.Log($"[SnipeAutoUpdater] Current version (detected): {currentVersionCode}");
@@ -109,12 +109,12 @@ namespace MiniIT.Snipe.Unity.Editor
 					string newerVersionCode = null;
 					int[] newerVersion = null;
 
-					for (int i = 0; i < SnipeUpdater.SnipePackageVersions.Length; i++)
+					for (int i = 0; i < SnipeUpdateWindow.SnipePackageVersions.Length; i++)
 					{
-						if (i == SnipeUpdater.CurrentSnipePackageVersionIndex)
+						if (i == SnipeUpdateWindow.CurrentSnipePackageVersionIndex)
 							continue;
 
-						string verName = SnipeUpdater.SnipePackageVersions[i];
+						string verName = SnipeUpdateWindow.SnipePackageVersions[i];
 						if (TryParseVersion(verName, out int[] ver) && CheckVersionGreater(newerVersion ?? version, ver))
 						{
 							newerVersionCode = verName;
@@ -130,7 +130,7 @@ namespace MiniIT.Snipe.Unity.Editor
 							$"Snipe {newerVersionCode}\n\nNewer version found.\n(Installed version is {currentVersionCode})",
 							"Update now", "Dismiss"))
 						{
-							SnipeUpdater.InstallSnipePackage(newerVersionCode);
+							SnipeUpdateWindow.InstallSnipePackage(newerVersionCode);
 						}
 					}
 				}
@@ -149,7 +149,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		private static void OnInstalledPackagesListFetched(PackageCollection installedPackages)
 		{
-			SnipeUpdater.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
+			SnipeUpdateWindow.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
 			s_installedPackages = installedPackages;
 		}
 

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
-	public class SnipeUpdater : EditorWindow
+	public class SnipeUpdateWindow : EditorWindow
 	{
 		private DropdownField _versionsDropdown;
 		private Button _btnSwitchUpdate;
@@ -35,7 +35,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		[MenuItem("Snipe/Updater...")]
 		public static void ShowWindow()
 		{
-			EditorWindow.GetWindow(typeof(SnipeUpdater));
+			EditorWindow.GetWindow(typeof(SnipeUpdateWindow));
 		}
 
 		private void OnEnable()
@@ -49,7 +49,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		public void CreateGUI()
 		{
 			var root = rootVisualElement;
-			UIUtility.LoadUI(root, "SnipeUpdater", "base");
+			UIUtility.LoadUI(root, "SnipeUpdateWindow", "base");
 
 			_btnUpdateTools = root.Q<Button>("update-tools");
 			_btnFetchVersions = root.Q<Button>("fetch-versions");

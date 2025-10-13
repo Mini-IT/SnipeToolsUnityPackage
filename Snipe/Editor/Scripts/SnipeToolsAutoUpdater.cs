@@ -79,7 +79,7 @@ namespace MiniIT.Snipe.Unity.Editor
 							$"Snipe Tools {newerVersionCode}\n\nNewer version of Snipe Tools found\n(Installed version is {currentVersionCode})",
 							"Update now", "Dismiss"))
 						{
-							SnipeUpdater.InstallSnipeToolsPackage();
+							SnipeUpdateWindow.InstallSnipeToolsPackage();
 						}
 					}
 				}
@@ -92,8 +92,8 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			Debug.Log("[SnipeToolsAutoUpdater] FetchVersionsList - GetBranchesList - start");
 
-			var branches = await SnipeUpdater.RequestList<GitHubBranchesListWrapper>(GIT_API_URL, "branches");
-			var tags = await SnipeUpdater.RequestList<GitHubTagsListWrapper>(GIT_API_URL, "tags");
+			var branches = await SnipeUpdateWindow.RequestList<GitHubBranchesListWrapper>(GIT_API_URL, "branches");
+			var tags = await SnipeUpdateWindow.RequestList<GitHubTagsListWrapper>(GIT_API_URL, "tags");
 
 			int itemsCount = (branches?.items?.Count ?? 0) + (tags?.items?.Count ?? 0);
 			s_packageVersions = new List<string>(itemsCount);
