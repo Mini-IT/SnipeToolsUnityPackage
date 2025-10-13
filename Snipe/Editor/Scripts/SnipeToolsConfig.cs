@@ -213,7 +213,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			catch (Exception e)
 			{
-				Debug.LogError($"[{nameof(SnipeToolsConfig)}] FAILED to fetch projects list: {e}");
+				LogError($"[{nameof(SnipeToolsConfig)}] FAILED to fetch projects list: {e}");
 				projectStringID = null;
 			}
 
@@ -223,6 +223,11 @@ namespace MiniIT.Snipe.Unity.Editor
 		private static void Log(string msg)
 		{
 			Debug.Log($"[{nameof(SnipeToolsConfig)}] {msg}");
+		}
+
+		private static void LogError(string msg)
+		{
+			Debug.LogError($"[{nameof(SnipeToolsConfig)}] {msg}");
 		}
 	}
 
