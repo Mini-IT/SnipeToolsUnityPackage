@@ -1,20 +1,18 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-  <ui:VisualElement class="root">
-    <ui:VisualElement class="row">
-      <ui:Button name="update-tools" text="Update Snipe Tools Package" />
-      <ui:Button name="fetch-versions" text="Fetch Versions" />
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement class="root">
+        <ui:VisualElement class="row">
+            <ui:Button name="update-tools" text="Update Snipe Tools Package" />
+            <ui:Button name="fetch-versions" text="Fetch Versions" />
+        </ui:VisualElement>
+        <ui:Label name="status" style="-unity-font-style: italic;" />
+        <ui:VisualElement class="row">
+            <ui:Label text="Current version (detected):" />
+            <ui:Label name="current-version" />
+        </ui:VisualElement>
+        <ui:VisualElement class="row">
+            <ui:Label text="Version:" />
+            <ui:DropdownField name="versions" style="flex-grow: 1; flex-basis: 0; min-width: 0;" />
+            <ui:Button name="switch-update" text="Switch / Update" />
+        </ui:VisualElement>
     </ui:VisualElement>
-    <ui:Label name="status" />
-    <ui:VisualElement class="row">
-      <ui:Label text="Current version (detected):" />
-      <ui:Label name="current-version" />
-    </ui:VisualElement>
-    <ui:VisualElement class="row">
-      <ui:Label text="Version:" />
-      <uie:PopupField name="versions" />
-      <ui:VisualElement style="flex-grow:1" />
-      <ui:Button name="switch-update" text="Switch / Update" />
-    </ui:VisualElement>
-  </ui:VisualElement>
 </ui:UXML>
-
