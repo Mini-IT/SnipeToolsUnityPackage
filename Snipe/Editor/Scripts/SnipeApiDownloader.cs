@@ -84,13 +84,13 @@ namespace MiniIT.Snipe.Unity.Editor
 			//-------
 
 			var root = rootVisualElement;
-			var baseStyle = LoadStyleSheet("base");
+			var baseStyle = UIUtility.LoadStyleSheet("base");
 			if (baseStyle != null)
 			{
 				root.styleSheets.Add(baseStyle);
 			}
 
-			var tree = LoadUxml("SnipeApiDownloader");
+			var tree = UIUtility.LoadUxml("SnipeApiDownloader");
 			if (tree != null)
 			{
 				tree.CloneTree(root);
@@ -132,30 +132,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			if (directoryField != null) directoryField.SetEnabled(enabled);
 			if (browseButton != null) browseButton.SetEnabled(enabled);
 			if (downloadButton != null) downloadButton.SetEnabled(enabled);
-		}
-
-		private static VisualTreeAsset LoadUxml(string fileStem)
-		{
-			string filter = fileStem + " t:VisualTreeAsset";
-			var guids = AssetDatabase.FindAssets(filter);
-			if (guids != null && guids.Length > 0)
-			{
-				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-				return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
-			}
-			return null;
-		}
-
-		private static StyleSheet LoadStyleSheet(string fileStem)
-		{
-			string filter = fileStem + " t:StyleSheet";
-			var guids = AssetDatabase.FindAssets(filter);
-			if (guids != null && guids.Length > 0)
-			{
-				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-				return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
-			}
-			return null;
 		}
 
 		private async void DownloadSnipeApiAndClose()

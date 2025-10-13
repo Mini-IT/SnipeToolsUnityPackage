@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 using UnityEngine;
 
@@ -75,20 +74,18 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private void OnGUI() { }
-
 		public void CreateGUI()
 		{
 			SnipeToolsConfig.Load();
 
 			var root = rootVisualElement;
-			var baseStyle = LoadStyleSheet("base");
+			var baseStyle = UIUtility.LoadStyleSheet("base");
 			if (baseStyle != null)
 			{
 				root.styleSheets.Add(baseStyle);
 			}
 
-			var tree = LoadUxml("SnipeRemoteConfigDownloader");
+			var tree = UIUtility.LoadUxml("SnipeRemoteConfigDownloader");
 			if (tree != null)
 			{
 				tree.CloneTree(root);
@@ -209,30 +206,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			_appInfo.ApplicationPlatform = GetPlaftomString();
-		}
-
-		private static VisualTreeAsset LoadUxml(string fileStem)
-		{
-			string filter = fileStem + " t:VisualTreeAsset";
-			var guids = AssetDatabase.FindAssets(filter);
-			if (guids != null && guids.Length > 0)
-			{
-				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-				return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
-			}
-			return null;
-		}
-
-		private static StyleSheet LoadStyleSheet(string fileStem)
-		{
-			string filter = fileStem + " t:StyleSheet";
-			var guids = AssetDatabase.FindAssets(filter);
-			if (guids != null && guids.Length > 0)
-			{
-				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-				return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
-			}
-			return null;
 		}
 
 		private string GetPlaftomString()
