@@ -45,17 +45,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		public void CreateGUI()
 		{
 			var root = rootVisualElement;
-			var baseStyle = UIUtility.LoadStyleSheet("base");
-			if (baseStyle != null)
-			{
-				root.styleSheets.Add(baseStyle);
-			}
-
-			var tree = UIUtility.LoadUxml("SnipeUpdater");
-			if (tree != null)
-			{
-				tree.CloneTree(root);
-			}
+			UIUtility.LoadUI(root, "SnipeUpdater", "base");
 
 			var btnUpdateTools = root.Q<Button>("update-tools");
 			var btnFetchVersions = root.Q<Button>("fetch-versions");

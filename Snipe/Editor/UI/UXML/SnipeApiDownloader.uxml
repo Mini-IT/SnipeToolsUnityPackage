@@ -1,15 +1,15 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <ui:VisualElement class="root">
-        <MiniIT.Snipe.Unity.Editor.AuthKeyWidget />
+        <MiniIT.Snipe.Unity.Editor.AuthKeyWidget name="auth-key-widget" />
         <ui:VisualElement class="spacer" />
         <ui:VisualElement class="row">
             <ui:TextField name="directory" label="Directory" style="flex-grow: 1; flex-basis: 0; min-width: 0;" />
-            <ui:Button name="browse" text="..." style="width: 40px; flex-shrink: 0;" />
+            <ui:Button name="btn-browse" text="..." style="width: 40px; flex-shrink: 0;" />
         </ui:VisualElement>
         <ui:VisualElement class="row">
             <ui:Label name="version-label" style="-unity-font-style: italic;" />
             <ui:VisualElement style="flex-grow: 1;" />
-            <ui:Button name="download" text="Download" />
+            <ui:Button name="btn-download" text="Download" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

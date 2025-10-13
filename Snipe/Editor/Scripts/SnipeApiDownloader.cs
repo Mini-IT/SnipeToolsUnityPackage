@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -26,6 +27,12 @@ namespace MiniIT.Snipe.Unity.Editor
 		private const string SERVICE_FILE_NAME = "SnipeApiService.cs";
 
 		private string _directoryPath;
+
+		private TextField _directoryField;
+		private Button _browseButton;
+		private Label _versionLabel;
+		private Button _downloadButton;
+		private AuthKeyWidget _authKeyWidget;
 
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
@@ -84,62 +91,56 @@ namespace MiniIT.Snipe.Unity.Editor
 			//-------
 
 			var root = rootVisualElement;
-			var baseStyle = UIUtility.LoadStyleSheet("base");
-			if (baseStyle != null)
-			{
-				root.styleSheets.Add(baseStyle);
-			}
+			UIUtility.LoadUI(root, "SnipeApiDownloader", "base");
 
-			var tree = UIUtility.LoadUxml("SnipeApiDownloader");
-			if (tree != null)
-			{
-				tree.CloneTree(root);
-			}
+			_directoryField = root.Q<TextField>("directory");
+			_browseButton = root.Q<Button>("btn-browse");
+			_versionLabel = root.Q<Label>("version-label");
+			_downloadButton = root.Q<Button>("btn-download");
+			_authKeyWidget = root.Q<AuthKeyWidget>("auth-key-widget");
 
-			var directoryField = root.Q<TextField>("directory");
-			var browseButton = root.Q<Button>("browse");
-			var versionLabel = root.Q<Label>("version-label");
-			var downloadButton = root.Q<Button>("download");
+			_versionLabel.text = "Snipe API Service Version: " + SNIPE_VERSION_SUFFIX;
 
-			versionLabel.text = "Snipe API Service Version: " + SNIPE_VERSION_SUFFIX;
+			_directoryField.value = string.IsNullOrEmpty(_directoryPath) ? Application.dataPath : _directoryPath;
+			_directoryField.RegisterValueChangedCallback(evt => _directoryPath = evt.newValue);
 
-			directoryField.value = string.IsNullOrEmpty(_directoryPath) ? Application.dataPath : _directoryPath;
-			directoryField.RegisterValueChangedCallback(evt => _directoryPath = evt.newValue);
-
-			browseButton.clicked += () =>
+			_browseButton.clicked += () =>
 			{
 				string filename = SERVICE_FILE_NAME;
 				string path = EditorUtility.SaveFolderPanel($"Choose location of {filename}", _directoryPath, "");
 				if (!string.IsNullOrEmpty(path))
 				{
 					_directoryPath = path;
-					directoryField.value = path;
+					_directoryField.value = path;
 				}
 			};
 
-			UpdateInteractable(root);
+			SetControlsEnabled(SnipeToolsConfig.IsAuthKeyValid);
 
-			downloadButton.clicked += () => DownloadSnipeApiAndClose();
+			_downloadButton.clicked += OnDownloadButtonPressed;
 		}
 
-		private void UpdateInteractable(VisualElement root)
+		private void SetControlsEnabled(bool enabled)
 		{
-			bool enabled = SnipeToolsConfig.IsAuthKeyValid;
-			var directoryField = root.Q<TextField>("directory");
-			var browseButton = root.Q<Button>("browse");
-			var downloadButton = root.Q<Button>("download");
-
-			if (directoryField != null) directoryField.SetEnabled(enabled);
-			if (browseButton != null) browseButton.SetEnabled(enabled);
-			if (downloadButton != null) downloadButton.SetEnabled(enabled);
+			_directoryField?.SetEnabled(enabled);
+			_browseButton?.SetEnabled(enabled);
+			_downloadButton?.SetEnabled(enabled);
+			_authKeyWidget?.SetEnabled(enabled);
 		}
 
-		private async void DownloadSnipeApiAndClose()
+		private async void OnDownloadButtonPressed()
 		{
-			await DownloadSnipeApi();
-			await Task.Yield();
-			AssetDatabase.Refresh();
-			this.Close();
+			SetControlsEnabled(false);
+			try
+			{
+				await DownloadSnipeApi();
+				await Task.Yield();
+				AssetDatabase.Refresh();
+			}
+			finally
+			{
+				SetControlsEnabled(true);
+			}
 		}
 
 		public async Task DownloadSnipeApi()

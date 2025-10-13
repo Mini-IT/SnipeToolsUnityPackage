@@ -79,17 +79,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			SnipeToolsConfig.Load();
 
 			var root = rootVisualElement;
-			var baseStyle = UIUtility.LoadStyleSheet("base");
-			if (baseStyle != null)
-			{
-				root.styleSheets.Add(baseStyle);
-			}
-
-			var tree = UIUtility.LoadUxml("SnipeRemoteConfigDownloader");
-			if (tree != null)
-			{
-				tree.CloneTree(root);
-			}
+			UIUtility.LoadUI(root, "SnipeRemoteConfigDownloader", "base");
 
 			var toggleLoadDefault = root.Q<Toggle>("load-default");
 			var sectionCustom = root.Q<VisualElement>("custom-config-section");

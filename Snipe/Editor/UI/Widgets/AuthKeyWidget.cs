@@ -18,17 +18,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		public AuthKeyWidget()
 		{
-			var tree = UIUtility.LoadUxml("AuthKeyWidget");
-			if (tree != null)
-			{
-				tree.CloneTree(this);
-			}
-
-			var style = UIUtility.LoadStyleSheet("AuthKeyWidget");
-			if (style != null)
-			{
-				styleSheets.Add(style);
-			}
+			UIUtility.LoadUI(this, "AuthKeyWidget", "AuthKeyWidget");
 
 			_authKeyField = this.Q<TextField>("auth-key");
 			_projectStringIdLabel = this.Q<Label>("project-string-id");

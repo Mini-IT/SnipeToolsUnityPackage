@@ -5,7 +5,22 @@ namespace MiniIT.Snipe.Unity.Editor
 {
 	public static class UIUtility
 	{
-		public static VisualTreeAsset LoadUxml(string fileStem)
+		public static void LoadUI(VisualElement root, string umxlName, string stylesheetName)
+		{
+			var baseStyle = LoadStyleSheet(stylesheetName);
+			if (baseStyle != null)
+			{
+				root.styleSheets.Add(baseStyle);
+			}
+
+			var tree = LoadUxml(umxlName);
+			if (tree != null)
+			{
+				tree.CloneTree(root);
+			}
+		}
+
+		private static VisualTreeAsset LoadUxml(string fileStem)
 		{
 			string filter = fileStem + " t:VisualTreeAsset";
 			var guids = AssetDatabase.FindAssets(filter);
@@ -17,7 +32,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			return null;
 		}
 
-		public static StyleSheet LoadStyleSheet(string fileStem)
+		private static StyleSheet LoadStyleSheet(string fileStem)
 		{
 			string filter = fileStem + " t:StyleSheet";
 			var guids = AssetDatabase.FindAssets(filter);
