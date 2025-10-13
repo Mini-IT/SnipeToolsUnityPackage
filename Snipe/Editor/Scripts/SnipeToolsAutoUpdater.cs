@@ -18,12 +18,12 @@ namespace MiniIT.Snipe.Unity.Editor
 #endif
 	public static class SnipeToolsAutoUpdater
 	{
-		internal const string GIT_API_URL = "https://api.github.com/repos/Mini-IT/SnipeToolsUnityPackage/";
-		
-		private static bool mProcessing = false;
-		private static List<string> mPackageVersions;
-		private static int mCurrentPackageVersionIndex = -1;
-		private static ListRequest mPackageListRequest;
+		private const string GIT_API_URL = "https://api.github.com/repos/Mini-IT/SnipeToolsUnityPackage/";
+
+		private static bool s_processing = false;
+		private static List<string> s_packageVersions;
+		private static int s_currentPackageVersionIndex = -1;
+		private static ListRequest s_packageListRequest;
 
 		//[MenuItem("Snipe/Check for SnipeTools Update")]
 		public static void CheckUpdateAvailable()
@@ -36,47 +36,47 @@ namespace MiniIT.Snipe.Unity.Editor
 #if UNITY_CLOUD_BUILD
 			return;
 #endif
-			
-			if (mProcessing)
+
+			if (s_processing)
 				return;
-			mProcessing = true;
-			
+			s_processing = true;
+
 			Debug.Log("[SnipeToolsAutoUpdater] CheckUpdateAvailable");
-			
+
 			await FetchVersionsList();
-			
-			if (mPackageVersions != null && mPackageVersions.Count > 0)
+
+			if (s_packageVersions != null && s_packageVersions.Count > 0)
 			{
-				string current_version_code = mCurrentPackageVersionIndex >= 0 ?
-					mPackageVersions[mCurrentPackageVersionIndex] :
+				string currentVersionCode = s_currentPackageVersionIndex >= 0 ?
+					s_packageVersions[s_currentPackageVersionIndex] :
 					"unknown";
-					
-				Debug.Log($"[SnipeToolsAutoUpdater] Current version (detected): {current_version_code}");
-				
-				if (SnipeAutoUpdater.TryParseVersion(current_version_code, out int[] version))
+
+				Debug.Log($"[SnipeToolsAutoUpdater] Current version (detected): {currentVersionCode}");
+
+				if (SnipeAutoUpdater.TryParseVersion(currentVersionCode, out int[] version))
 				{
-					string newer_version_code = null;
-					int[] newer_version = null;
-					
-					for (int i = 0; i < mPackageVersions.Count; i++)
+					string newerVersionCode = null;
+					int[] newerVersion = null;
+
+					for (int i = 0; i < s_packageVersions.Count; i++)
 					{
-						if (i == mCurrentPackageVersionIndex)
+						if (i == s_currentPackageVersionIndex)
 							continue;
-						
-						string ver_name = mPackageVersions[i];
-						if (SnipeAutoUpdater.TryParseVersion(ver_name, out int[] ver) && SnipeAutoUpdater.CheckVersionGreater(newer_version ?? version, ver))
+
+						string verName = s_packageVersions[i];
+						if (SnipeAutoUpdater.TryParseVersion(verName, out int[] ver) && SnipeAutoUpdater.CheckVersionGreater(newerVersion ?? version, ver))
 						{
-							newer_version_code = ver_name;
-							newer_version = ver;
+							newerVersionCode = verName;
+							newerVersion = ver;
 						}
 					}
-					
-					if (!string.IsNullOrEmpty(newer_version_code))
+
+					if (!string.IsNullOrEmpty(newerVersionCode))
 					{
-						Debug.Log($"[SnipeToolsAutoUpdater] A newer version found: {newer_version_code}");
-						
+						Debug.Log($"[SnipeToolsAutoUpdater] A newer version found: {newerVersionCode}");
+
 						if (EditorUtility.DisplayDialog("Snipe Tools Auto Updater",
-							$"Snipe Tools {newer_version_code}\n\nNewer version of Snipe Tools found\n(Installed version is {current_version_code})",
+							$"Snipe Tools {newerVersionCode}\n\nNewer version of Snipe Tools found\n(Installed version is {currentVersionCode})",
 							"Update now", "Dismiss"))
 						{
 							SnipeUpdater.InstallSnipeToolsPackage();
@@ -84,36 +84,36 @@ namespace MiniIT.Snipe.Unity.Editor
 					}
 				}
 			}
-			
-			mProcessing = false;
+
+			s_processing = false;
 		}
-		
+
 		private static async Task FetchVersionsList(PackageCollection intalledPackages = null)
 		{
 			Debug.Log("[SnipeToolsAutoUpdater] FetchVersionsList - GetBranchesList - start");
-			
+
 			var branches = await SnipeUpdater.RequestList<GitHubBranchesListWrapper>(GIT_API_URL, "branches");
 			var tags = await SnipeUpdater.RequestList<GitHubTagsListWrapper>(GIT_API_URL, "tags");
 
-			int items_count = (branches?.items?.Count ?? 0) + (tags?.items?.Count ?? 0);
-			mPackageVersions = new List<string>(items_count);
+			int itemsCount = (branches?.items?.Count ?? 0) + (tags?.items?.Count ?? 0);
+			s_packageVersions = new List<string>(itemsCount);
 
 			if (branches?.items != null)
 			{
 				foreach (var item in branches.items)
 				{
-					mPackageVersions.Add(item.name);
+					s_packageVersions.Add(item.name);
 				}
 			}
-			
+
 			if (tags?.items != null)
 			{
 				foreach (var item in tags.items)
 				{
-					mPackageVersions.Add(item.name);
+					s_packageVersions.Add(item.name);
 				}
 			}
-			
+
 			Debug.Log("SnipeToolsAutoUpdater] FetchVersionsList - GetBranchesList - done");
 
 			Debug.Log("SnipeToolsAutoUpdater] FetchVersionsList - Check installed packages");
@@ -124,40 +124,40 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			else
 			{
-				mPackageListRequest = UnityEditor.PackageManager.Client.List(false, false);
+				s_packageListRequest = UnityEditor.PackageManager.Client.List(false, false);
 				EditorApplication.update -= OnEditorUpdate;
 				EditorApplication.update += OnEditorUpdate;
 
-				while (mPackageListRequest != null)
+				while (s_packageListRequest != null)
 				{
 					await Task.Delay(100);
 				}
 			}
 		}
-		
+
 		private static void OnEditorUpdate()
 		{
-			if (mPackageListRequest == null)
+			if (s_packageListRequest == null)
 			{
 				EditorApplication.update -= OnEditorUpdate;
 				return;
 			}
 
-			if (!mPackageListRequest.IsCompleted)
+			if (!s_packageListRequest.IsCompleted)
 			{
 				return;
 			}
 
-			if (mPackageListRequest.Status == StatusCode.Success)
+			if (s_packageListRequest.Status == StatusCode.Success)
 			{
-				RefreshCurrentPackageVersionIndex(mPackageListRequest.Result);
+				RefreshCurrentPackageVersionIndex(s_packageListRequest.Result);
 			}
-			else if (mPackageListRequest.Status >= StatusCode.Failure)
+			else if (s_packageListRequest.Status >= StatusCode.Failure)
 			{
-				Debug.Log($"[SnipeToolsAutoUpdater] Search failed : {mPackageListRequest.Error.message}");
+				Debug.Log($"[SnipeToolsAutoUpdater] Search failed : {s_packageListRequest.Error.message}");
 			}
 
-			mPackageListRequest = null;
+			s_packageListRequest = null;
 			EditorApplication.update -= OnEditorUpdate;
 		}
 
@@ -181,15 +181,15 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				Debug.Log($"[SnipeToolsAutoUpdater] found package: {package.name} {package.version} {package.packageId}");
 
-				int index = package.packageId.LastIndexOf(".git#");
+				int index = package.packageId.LastIndexOf(".git#", StringComparison.Ordinal);
 				if (index > 0)
 				{
-					string package_version = package.packageId.Substring(index + ".git#".Length);
-					mCurrentPackageVersionIndex = mPackageVersions.IndexOf(package_version);
+					string packageVersion = package.packageId.Substring(index + ".git#".Length);
+					s_currentPackageVersionIndex = s_packageVersions.IndexOf(packageVersion);
 				}
 				else
 				{
-					mCurrentPackageVersionIndex = mPackageVersions.IndexOf(package.version);
+					s_currentPackageVersionIndex = s_packageVersions.IndexOf(package.version);
 				}
 			}
 		}
