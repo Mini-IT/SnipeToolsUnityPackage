@@ -1,8 +1,8 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
   <ui:VisualElement class="root">
-    <ui:Toolbar>
-      <ui:ToolbarSearchField name="search" />
-    </ui:Toolbar>
+    <uie:Toolbar>
+      <uie:ToolbarSearchField name="search" />
+    </uie:Toolbar>
     <ui:Foldout name="groups-foldout" text="Groups">
       <ui:ListView name="groups" />
     </ui:Foldout>

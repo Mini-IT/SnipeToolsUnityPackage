@@ -12,7 +12,12 @@ namespace MiniIT.Snipe.Unity.Editor
 		private ErrorCodesTracker _tracker;
 		private Dictionary<string, List<string>> _groupedMessages;
 
-		//[MenuItem("Snipe/ErrorCodes...")]
+		// [MenuItem("Snipe/ErrorCodes...")]
+		// public static void ShowWindow()
+		// {
+		// 	ShowWindow(new ErrorCodesTracker());
+		// }
+
 		public static void ShowWindow(ErrorCodesTracker tracker)
 		{
 			var window = EditorWindow.GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
@@ -35,24 +40,19 @@ namespace MiniIT.Snipe.Unity.Editor
 					_groupedMessages[messageType].Add(fastJSON.JSON.ToJSON(item));
 				}
 			}
-		}
 
-		private void OnGUI() { }
+			RefreshUI();
+		}
 
 		public void CreateGUI()
 		{
 			var root = rootVisualElement;
-			var baseStyle = LoadStyleSheet("base");
-			if (baseStyle != null)
-			{
-				root.styleSheets.Add(baseStyle);
-			}
+			UIUtility.LoadUI(root, "ErrorCodesHighlightWindow", "base");
+		}
 
-			var tree = LoadUxml("ErrorCodesHighlightWindow");
-			if (tree != null)
-			{
-				tree.CloneTree(root);
-			}
+		private void RefreshUI()
+		{
+			var root = rootVisualElement;
 
 			var search = root.Q<ToolbarSearchField>("search");
 			var groupsList = root.Q<ListView>("groups");
@@ -98,37 +98,13 @@ namespace MiniIT.Snipe.Unity.Editor
 			});
 		}
 
-		private static void SetItems(ListView list, System.Collections.Generic.List<string> items)
+		private static void SetItems(ListView list, List<string> items)
 		{
-			items ??= new System.Collections.Generic.List<string>();
+			items ??= new List<string>();
 			list.itemsSource = items;
 			list.makeItem = () => new TextField() { isReadOnly = true };
 			list.bindItem = (e, i) => ((TextField)e).value = items[i];
 			list.Rebuild();
-		}
-
-		private static VisualTreeAsset LoadUxml(string fileStem)
-		{
-			string filter = fileStem + " t:VisualTreeAsset";
-			var guids = AssetDatabase.FindAssets(filter);
-			if (guids != null && guids.Length > 0)
-			{
-				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-				return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
-			}
-			return null;
-		}
-
-		private static StyleSheet LoadStyleSheet(string fileStem)
-		{
-			string filter = fileStem + " t:StyleSheet";
-			var guids = AssetDatabase.FindAssets(filter);
-			if (guids != null && guids.Length > 0)
-			{
-				string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-				return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
-			}
-			return null;
 		}
 	}
 }
