@@ -12,7 +12,7 @@ using Debug = UnityEngine.Debug;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
-	public class SnipeApiDownloader : EditorWindow
+	public class SnipeApiDownloadWindow : EditorWindow
 	{
 #if SNIPE_8_0_OR_NEWER
 		private const string SNIPE_VERSION_SUFFIX = "V8";
@@ -37,20 +37,8 @@ namespace MiniIT.Snipe.Unity.Editor
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
 		{
-			EditorWindow.GetWindow<SnipeApiDownloader>("SnipeApi");
+			EditorWindow.GetWindow<SnipeApiDownloadWindow>("SnipeApi");
 		}
-
-		// protected void OnEnable()
-		// {
-		// 	SnipeToolsConfig.Load();
-		//
-		// 	FindSnipeApiDirectory();
-		//
-		// 	if (SnipeAutoUpdater.AutoUpdateEnabled)
-		// 	{
-		// 		SnipeAutoUpdater.CheckUpdateAvailable();
-		// 	}
-		// }
 
 		private void FindSnipeApiDirectory()
 		{
@@ -91,7 +79,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			//-------
 
 			var root = rootVisualElement;
-			UIUtility.LoadUI(root, "SnipeApiDownloader", "base");
+			UIUtility.LoadUI(root, "SnipeApiDownloadWindow", "base");
 
 			_directoryField = root.Q<TextField>("directory");
 			_browseButton = root.Q<Button>("btn-browse");

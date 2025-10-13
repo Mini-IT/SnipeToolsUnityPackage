@@ -1,6 +1,7 @@
 ﻿#if UNITY_EDITOR && SNIPE_6_1_OR_NEWER
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -13,7 +14,7 @@ using Debug = UnityEngine.Debug;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
-	public class SnipeRemoteConfigDownloader : EditorWindow
+	public class SnipeRemoteConfigDownloadWindow : EditorWindow
 	{
 		private const string SA_FILENAME = "remote_config_defaults.json";
 
@@ -29,7 +30,30 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			None,
 			Nutaku,
+			Yandex,
 		}
+
+		private readonly Dictionary<string, string> _platformList = new()
+		{
+			["amazon"] = "Android (Amazon)",
+			["android"] = "Android (Google Play)",
+			["androidNutaku"] = "Android (Nutaku)",
+			["rustore"] = "Android (RuStore)",
+			["huawei"] = "Android (Huawei)",
+			["ios"] = "iOS",
+			["linux"] = "Linux",
+			["macos"] = "macOS",
+			["ps4"] = "PS4",
+			["ps5"] = "PS5",
+			["steam"] = "Steam",
+			["switch"] = "Switch",
+			["editor"] = "Unity Editor",
+			["webgl"] = "WebGL",
+			["webglNutaku"] = "WebGL (Nutaku)",
+			["webglYandex"] = "WebGL (Yandex)",
+			["windows"] = "Windows (UWP)",
+			["xboxone"] = "Xbox One",
+		};
 
 		private MockApplicationInfo _appInfo;
 		private static string s_filePath;
@@ -38,28 +62,19 @@ namespace MiniIT.Snipe.Unity.Editor
 		private WebGLSubPlatform _webglSubplatform;
 		private string _content;
 		private Vector2 _contentScrollPosition;
+		private TextField _contentField;
+		private DropdownField _targetPlatformDropdown;
+		private string _selectedTargetPlatform;
 
 		[MenuItem("Snipe/Remote Config...")]
 		public static void ShowWindow()
 		{
-			EditorWindow.GetWindow<SnipeRemoteConfigDownloader>("Snipe Remote Config");
+			EditorWindow.GetWindow<SnipeRemoteConfigDownloadWindow>("Snipe Remote Config");
 		}
 
 		public static void InitFilePath()
 		{
 			s_filePath = Path.Combine(Application.streamingAssetsPath, SA_FILENAME);
-		}
-
-		protected void OnEnable()
-		{
-			SnipeToolsConfig.Load();
-
-			InitFilePath();
-
-			_platform = Application.platform;
-			_appInfo = new MockApplicationInfo();
-
-			ReadConfigFile();
 		}
 
 		private async void ReadConfigFile()
@@ -72,38 +87,70 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				_content = string.Empty;
 			}
+
+			if (_contentField != null)
+			{
+				_contentField.value = _content;
+			}
 		}
 
 		public void CreateGUI()
 		{
 			SnipeToolsConfig.Load();
 
-			var root = rootVisualElement;
-			UIUtility.LoadUI(root, "SnipeRemoteConfigDownloader", "base");
+			InitFilePath();
 
-			var toggleLoadDefault = root.Q<Toggle>("load-default");
-			var sectionCustom = root.Q<VisualElement>("custom-config-section");
-			var sectionDefault = root.Q<VisualElement>("default-config-section");
+			_platform = Application.platform;
+			_appInfo = new MockApplicationInfo();
+
+			var root = rootVisualElement;
+			UIUtility.LoadUI(root, "SnipeRemoteConfigDownloadWindow", "base");
+
+			var toggleLoadDefault = root.Q<Toggle>("load-on-build-toggle");
+			var sectionRuntime = root.Q<VisualElement>("runtime-config-section");
+			var sectionBuildtime = root.Q<VisualElement>("buildtime-config-section");
 			var appIdField = root.Q<TextField>("app-identifier");
 			var appVersionField = root.Q<TextField>("app-version");
 			var platformField = root.Q<EnumField>("platform");
 			var androidSubField = root.Q<EnumField>("android-subplatform");
 			var webglSubField = root.Q<EnumField>("webgl-subplatform");
-			var downloadPlatformButton = root.Q<Button>("download-platform");
-			var downloadDefaultButton = root.Q<Button>("download-default");
-			var contentField = root.Q<TextField>("content");
+			var downloadRuntimeButton = root.Q<Button>("btn-download-runtime");
+			var downloadBuildtimeButton = root.Q<Button>("btn-download-buildtime");
+			_targetPlatformDropdown = root.Q<DropdownField>("target-platform");
+			_contentField = root.Q<TextField>("content");
 
-			contentField.isReadOnly = true;
-			contentField.multiline = true;
+			_contentField.isReadOnly = true;
+			_contentField.multiline = true;
 
 			toggleLoadDefault.value = SnipeToolsConfig.LoadDefaultConfigOnBuild;
 			toggleLoadDefault.RegisterValueChangedCallback(evt =>
 			{
 				SnipeToolsConfig.LoadDefaultConfigOnBuild = evt.newValue;
 				SnipeToolsConfig.Save();
-				UpdateSectionsVisibility(sectionCustom, sectionDefault, evt.newValue);
-				UpdateButtonsState(downloadPlatformButton, downloadDefaultButton);
+				UpdateSectionsVisibility(sectionRuntime, sectionBuildtime, evt.newValue);
+				UpdateButtonsState(downloadRuntimeButton, downloadBuildtimeButton);
 			});
+			// Populate target platform dropdown (default-config section)
+			if (_targetPlatformDropdown != null)
+			{
+				var displayNames = new List<string>(_platformList.Values);
+				_targetPlatformDropdown.choices = displayNames;
+				// Default to first value
+				_selectedTargetPlatform = new List<string>(_platformList.Keys)[0];
+				_targetPlatformDropdown.value = _platformList[_selectedTargetPlatform];
+				_targetPlatformDropdown.RegisterValueChangedCallback(evt =>
+				{
+					// map selected display value back to key
+					foreach (var kv in _platformList)
+					{
+						if (kv.Value == evt.newValue)
+						{
+							_selectedTargetPlatform = kv.Key;
+							break;
+						}
+					}
+				});
+			}
 
 			appIdField.value = _appInfo.ApplicationIdentifier;
 			appIdField.RegisterValueChangedCallback(evt => _appInfo.ApplicationIdentifier = evt.newValue);
@@ -133,13 +180,14 @@ namespace MiniIT.Snipe.Unity.Editor
 				UpdateAppInfoPlatform();
 			});
 
-			downloadPlatformButton.clicked += OnDownloadButtonPressed;
-			downloadDefaultButton.clicked += OnDownloadDefaultButtonPressed;
+			downloadRuntimeButton.clicked += OnDownloadRuntimeButtonPressed;
+			downloadBuildtimeButton.clicked += OnDownloadBuildtimeButtonPressed;
 
-			UpdateSectionsVisibility(sectionCustom, sectionDefault, SnipeToolsConfig.LoadDefaultConfigOnBuild);
+			UpdateSectionsVisibility(sectionRuntime, sectionBuildtime, SnipeToolsConfig.LoadDefaultConfigOnBuild);
 			UpdateSubplatformVisibility(platformField, androidSubField, webglSubField);
-			UpdateButtonsState(downloadPlatformButton, downloadDefaultButton);
-			RenderContent(contentField);
+			UpdateButtonsState(downloadRuntimeButton, downloadBuildtimeButton);
+
+			ReadConfigFile();
 		}
 
 		private void UpdateSectionsVisibility(VisualElement sectionCustom, VisualElement sectionDefault, bool loadDefault)
@@ -172,11 +220,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			bool authValid = !string.IsNullOrWhiteSpace(SnipeToolsConfig.AuthKey);
 			downloadDefaultButton.SetEnabled(authValid);
 			downloadPlatformButton.SetEnabled(true);
-		}
-
-		private void RenderContent(TextField contentField)
-		{
-			contentField.value = _content ?? string.Empty;
 		}
 
 		private void UpdateAppInfoPlatform()
@@ -215,15 +258,20 @@ namespace MiniIT.Snipe.Unity.Editor
 			return $"{_platform}";
 		}
 
-		private async void OnDownloadButtonPressed()
+		private async void OnDownloadRuntimeButtonPressed()
 		{
-			string json = await DownloadPlatformConfig();
+			string json = await DownloadRuntimeConfig();
 			_content = await CheckAndSaveLoadedConfig(json);
 		}
 
-		private async void OnDownloadDefaultButtonPressed()
+		private async void OnDownloadBuildtimeButtonPressed()
 		{
-			string json = await DownloadDefaultConfig();
+			if (string.IsNullOrEmpty(_selectedTargetPlatform))
+			{
+				Debug.LogError("Target platform must be specified");
+				return;
+			}
+			string json = await DownloadBuildtimeConfig(_selectedTargetPlatform);
 			_content = await CheckAndSaveLoadedConfig(json);
 		}
 
@@ -245,13 +293,13 @@ namespace MiniIT.Snipe.Unity.Editor
 			return json;
 		}
 
-		private async Task<string> DownloadPlatformConfig()
+		private async Task<string> DownloadRuntimeConfig()
 		{
-			Debug.Log("DownloadPlatformConfig - start");
+			Debug.Log("DownloadRuntimeConfig - start");
 
 			if (!SnipeToolsConfig.Initialized)
 			{
-				Debug.LogError("DownloadPlatformConfig - project ID not specified");
+				Debug.LogError("DownloadRuntimeConfig - project ID not specified");
 				return null;
 			}
 
@@ -261,35 +309,48 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			string projectStringID = SnipeToolsConfig.GetProjectStringID();
+
+			if (string.IsNullOrEmpty(projectStringID))
+			{
+				Debug.LogError("DownloadRuntimeConfig - Failed extracting ProjectStringID");
+				return null;
+			}
+
 			var loader = new SnipeConfigLoader(projectStringID, _appInfo);
 			var config = await loader.Load();
 			if (config == null)
 			{
-				Debug.LogError("DownloadPlatformConfig - null");
+				Debug.LogError("DownloadRuntimeConfig - config is null");
 				return null;
 			}
 
 			string json = fastJSON.JSON.ToNiceJSON(config);
 
 			Debug.Log(json);
-			Debug.Log("DownloadPlatformConfig - done");
+			Debug.Log("DownloadRuntimeConfig - done");
 
 			return json;
 		}
 
-		public static async Task<string> DownloadDefaultConfig(string targetPlatform = null)
+		public static async Task<string> DownloadBuildtimeConfig(string targetPlatform)
 		{
-			Debug.Log("DownloadDefaultConfig - start");
+			Debug.Log("DownloadBuildtimeConfig - start");
+
+			if (string.IsNullOrEmpty(targetPlatform))
+			{
+				Debug.LogError("DownloadBuildtimeConfig - targetPlatform is required");
+				return null;
+			}
 
 			string contentString = await RequestDefaultConfig(targetPlatform);
 
 			if (string.IsNullOrEmpty(contentString))
 			{
-				Debug.LogError("DownloadDefaultConfig - downloaded content is empty");
+				Debug.LogError("DownloadBuildtimeConfig - downloaded content is empty");
 				return null;
 			}
 
-			Debug.Log("DownloadDefaultConfig - loaded: " + contentString);
+			Debug.Log("DownloadBuildtimeConfig - loaded: " + contentString);
 
 			int startIndex = contentString.IndexOf('{', 1);
 			int endIndex = contentString.LastIndexOf('}');
@@ -301,14 +362,14 @@ namespace MiniIT.Snipe.Unity.Editor
 			json = fastJSON.JSON.ToNiceJSON(obj);
 
 			Debug.Log(json);
-			Debug.Log("DownloadDefaultConfig - done");
+			Debug.Log("DownloadBuildtimeConfig - done");
 
 			return json;
 		}
 
 		public static async Task<string> DownloadAndSaveDefaultConfig(string targetPlatform)
 		{
-			string json = await DownloadDefaultConfig(targetPlatform);
+			string json = await DownloadBuildtimeConfig(targetPlatform);
 			return await CheckAndSaveLoadedConfig(json);
 		}
 
@@ -321,9 +382,13 @@ namespace MiniIT.Snipe.Unity.Editor
 			loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
 			loader.Timeout = TimeSpan.FromSeconds(10);
 
-			string url = string.IsNullOrEmpty(targetPlatform)
-				? $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/clientConfigDefaultStrings"
-				: $"https://config.snipe.dev/api/v1/buildConfigStrings/{projectStringID}/{targetPlatform}";
+			if (string.IsNullOrEmpty(targetPlatform))
+			{
+				Debug.LogError("RequestDefaultConfig - targetPlatform is required");
+				return null;
+			}
+
+			string url = $"https://config.snipe.dev/api/v1/buildConfigStrings/{projectStringID}/{targetPlatform}";
 
 			Debug.Log("Download config: " + url);
 
@@ -331,7 +396,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			if (!response.IsSuccessStatusCode)
 			{
-				Debug.LogError($"DownloadDefaultConfig - FAILED - HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
+				Debug.LogError($"DownloadBuildtimeConfig - FAILED - HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
 				return null;
 			}
 
