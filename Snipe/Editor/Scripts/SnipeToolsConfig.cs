@@ -175,7 +175,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			return s_data.ProjectStringID;
 		}
 
-		private static string StripProjectStringID(string projectStringID)
+		public static string StripProjectStringID(string projectStringID)
 		{
 			if (projectStringID.EndsWith("_dev"))
 			{
