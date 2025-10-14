@@ -88,6 +88,11 @@ namespace MiniIT.Snipe.Unity.Editor
 				_content = string.Empty;
 			}
 
+			RefreshContentField();
+		}
+
+		private void RefreshContentField()
+		{
 			if (_contentField != null)
 			{
 				_contentField.value = _content;
@@ -262,6 +267,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			string json = await DownloadRuntimeConfig();
 			_content = await CheckAndSaveLoadedConfig(json);
+			RefreshContentField();
 		}
 
 		private async void OnDownloadBuildtimeButtonPressed()
@@ -273,6 +279,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			string json = await DownloadBuildtimeConfig(_selectedTargetPlatform);
 			_content = await CheckAndSaveLoadedConfig(json);
+			RefreshContentField();
 		}
 
 		public static async Task<string> CheckAndSaveLoadedConfig(string json)
