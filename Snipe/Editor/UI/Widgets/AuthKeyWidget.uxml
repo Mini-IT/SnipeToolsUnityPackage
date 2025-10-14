@@ -1,9 +1,9 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <ui:VisualElement class="auth-widget" style="background-color: rgba(255, 255, 255, 0.16); padding-right: 10px; padding-bottom: 10px; padding-left: 10px; margin-right: 0; margin-left: 0; padding-top: 10px;">
+    <ui:VisualElement class="auth-widget">
         <ui:TextField name="auth-key" label="API Key" />
         <ui:VisualElement class="row">
             <ui:Label name="project-string-id" />
-            <ui:Button name="fetch-psid" text="Fetch Project String ID" />
+            <ui:Button name="fetch-psid" text="Fetch - API Key Test (optional)" />
         </ui:VisualElement>
         <ui:VisualElement name="auth-error" class="helpbox error">
             <ui:Label name="auth-error-text" text="Specify a valid API key" />

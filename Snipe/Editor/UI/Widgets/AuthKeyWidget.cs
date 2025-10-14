@@ -67,7 +67,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		private void UpdateAuthState()
 		{
-			bool isValid = SnipeToolsConfig.IsAuthKeyValid;
+			bool isValid = !string.IsNullOrWhiteSpace(_authKeyField?.value); // SnipeToolsConfig.IsAuthKeyValid;
 			if (_authErrorContainer != null)
 			{
 				_authErrorContainer.style.display = isValid ? DisplayStyle.None : DisplayStyle.Flex;
