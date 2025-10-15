@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine.UIElements;
@@ -334,7 +333,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			string json = fastJSON.JSON.ToNiceJSON(config);
 
-			LogJson(config);
+			Debug.Log(json);
 			Debug.Log("DownloadRuntimeConfig - done");
 
 			return json;
@@ -366,10 +365,10 @@ namespace MiniIT.Snipe.Unity.Editor
 			string json = contentString.Substring(startIndex, endIndex - startIndex);
 
 			// Pretyfy JSON
-			var conf = (Dictionary<string, object>)fastJSON.JSON.Parse(json);
-			json = fastJSON.JSON.ToNiceJSON(conf);
+			var obj = fastJSON.JSON.Parse(json);
+			json = fastJSON.JSON.ToNiceJSON(obj);
 
-			LogJson(conf);
+			Debug.Log(json);
 			Debug.Log("DownloadBuildtimeConfig - done");
 
 			return json;
@@ -409,22 +408,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			return await response.Content.ReadAsStringAsync();
-		}
-
-		/// <summary>
-		/// Special logging method for Unity Dashboard
-		/// </summary>
-		/// <param name="dict"></param>
-		private static void LogJson(Dictionary<string, object> dict)
-		{
-			var stringBuilder = new StringBuilder();
-			stringBuilder.AppendLine("---- RC values ---- " + dict.Count);
-			foreach (var pair in dict)
-			{
-				stringBuilder.AppendFormat("  {0} = {1}", pair.Key, pair.Value);
-				stringBuilder.AppendLine();
-			}
-			Debug.Log(stringBuilder);
 		}
 	}
 }
