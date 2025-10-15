@@ -334,7 +334,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			string json = fastJSON.JSON.ToNiceJSON(config);
 
-			LogItems(config);
+			LogJson(config);
 			Debug.Log("DownloadRuntimeConfig - done");
 
 			return json;
@@ -369,7 +369,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			var conf = (Dictionary<string, object>)fastJSON.JSON.Parse(json);
 			json = fastJSON.JSON.ToNiceJSON(conf);
 
-			LogItems(conf);
+			LogJson(conf);
 			Debug.Log("DownloadBuildtimeConfig - done");
 
 			return json;
@@ -415,7 +415,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		/// Special logging method for Unity Dashboard
 		/// </summary>
 		/// <param name="dict"></param>
-		private static void LogItems(Dictionary<string, object> dict)
+		private static void LogJson(Dictionary<string, object> dict)
 		{
 			var stringBuilder = new StringBuilder();
 			stringBuilder.AppendLine("---- RC values ---- " + dict.Count);
