@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 
 using System.Collections.Generic;
+using MiniIT.Snipe.Debugging;
 using UnityEditor;
 
 namespace MiniIT.Snipe.Unity.Editor
@@ -10,27 +11,37 @@ namespace MiniIT.Snipe.Unity.Editor
 		private ErrorCodesTracker _tracker;
 		private Dictionary<string, List<string>> _groupedMessages;
 
-		//[MenuItem("Snipe/ErrorCodes...")]
-		public static void ShowWindow(ErrorCodesTracker tracker)
+		//[MenuItem("Snipe/ErrorCodes")] only for tests
+		public static void ShowWindow()
 		{
-			var window = EditorWindow.GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
-			window.Init(tracker);
+			var window = GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
+			window.Init(UnitySnipeServicesFactory.DebugErrorsTracker);
 		}
 
-		private void Init(ErrorCodesTracker tracker)
+		private void Init(ISnipeErrorsTracker tracker)
 		{
-			_tracker = tracker;
-
-			_groupedMessages = new Dictionary<string, List<string>>(_tracker.Items.Count);
-			foreach (var item in _tracker.Items)
+			if (tracker is not ErrorCodesTracker errorTracker)
 			{
-				if (item.TryGetValue("message_type", out var msgtype) && msgtype is string messageType)
+				return;
+			}
+
+			_tracker = errorTracker;
+
+			if (_tracker != null)
+			{
+				_groupedMessages = new Dictionary<string, List<string>>(_tracker.Items.Count);
+
+				foreach (var item in _tracker.Items)
 				{
-					if (!_groupedMessages.ContainsKey(messageType))
+					if (item.TryGetValue("message_type", out object msgType) && msgType is string messageType)
 					{
-						_groupedMessages.Add(messageType, new List<string>());
+						if (!_groupedMessages.ContainsKey(messageType))
+						{
+							_groupedMessages.Add(messageType, new List<string>());
+						}
+
+						_groupedMessages[messageType].Add(fastJSON.JSON.ToJSON(item));
 					}
-					_groupedMessages[messageType].Add(fastJSON.JSON.ToJSON(item));
 				}
 			}
 		}
@@ -47,12 +58,15 @@ namespace MiniIT.Snipe.Unity.Editor
 			foreach (var msg in _groupedMessages)
 			{
 				EditorGUILayout.Foldout(true, $"{msg.Key} ({msg.Value.Count})", true);
+
 				EditorGUI.indentLevel++;
+
 				foreach (string item in msg.Value)
 				{
-					EditorGUILayout.TextField(item);
+					EditorGUILayout.LabelField(item);
 				}
-				EditorGUI.indentLevel++;
+
+				EditorGUI.indentLevel--;
 			}
 
 			EditorGUILayout.EndVertical();

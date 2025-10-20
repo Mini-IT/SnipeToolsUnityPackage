@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 
 using System.Collections.Generic;
+using MiniIT.Snipe.Debugging;
 using UnityEditor;
 
 namespace MiniIT.Snipe.Unity.Editor
@@ -20,22 +21,17 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			if (state == PlayModeStateChange.EnteredPlayMode)
 			{
-				s_tracker?.Clear();
+				s_tracker ??= new ErrorCodesTracker();
+
 				UnitySnipeServicesFactory.DebugErrorsTracker = s_tracker;
 			}
 			else if (state == PlayModeStateChange.ExitingPlayMode)
 			{
 				if (s_tracker != null && s_tracker.Items.Count > 0)
 				{
-					ErrorCodesHighlightWindow.ShowWindow(s_tracker);
+					ErrorCodesHighlightWindow.ShowWindow();
 				}
 			}
-		}
-
-		public static void AddNotOk(IDictionary<string, object> properties)
-		{
-			s_tracker ??= new ErrorCodesTracker();
-			s_tracker.TrackNotOk(properties);
 		}
 	}
 }
