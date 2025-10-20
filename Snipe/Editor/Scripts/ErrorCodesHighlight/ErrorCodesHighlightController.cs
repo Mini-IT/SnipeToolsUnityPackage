@@ -22,6 +22,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			if (state == PlayModeStateChange.EnteredPlayMode)
 			{
 				s_tracker ??= new ErrorCodesTracker();
+				s_tracker.Clear();
 
 				UnitySnipeServicesFactory.DebugErrorsTracker = s_tracker;
 			}
