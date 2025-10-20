@@ -5,7 +5,7 @@ namespace MiniIT.Snipe.Unity.Editor
 {
 	public class ErrorCodesTracker : ISnipeErrorsTracker
 	{
-		public List<IDictionary<string, object>> Items { get; } = new ();
+		internal List<IDictionary<string, object>> Items { get; } = new ();
 
 		public void TrackNotOk(IDictionary<string, object> properties)
 		{

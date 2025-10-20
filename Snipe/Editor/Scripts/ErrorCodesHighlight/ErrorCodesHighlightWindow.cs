@@ -63,7 +63,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				foreach (string item in msg.Value)
 				{
-					EditorGUILayout.LabelField(item);
+					EditorGUILayout.TextField(item);
 				}
 
 				EditorGUI.indentLevel--;
