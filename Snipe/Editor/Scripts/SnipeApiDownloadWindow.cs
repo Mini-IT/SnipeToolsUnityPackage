@@ -1,16 +1,18 @@
 ﻿#if UNITY_EDITOR
 
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using UnityEditor;
+using UnityEngine.UIElements;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
-	public class SnipeApiDownloader : EditorWindow
+	public class SnipeApiDownloadWindow : EditorWindow
 	{
 #if SNIPE_8_0_OR_NEWER
 		private const string SNIPE_VERSION_SUFFIX = "V8";
@@ -26,22 +28,16 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		private string _directoryPath;
 
+		private TextField _directoryField;
+		private Button _browseButton;
+		private Label _versionLabel;
+		private Button _downloadButton;
+		private AuthKeyWidget _authKeyWidget;
+
 		[MenuItem("Snipe/Download SnipeApi...")]
 		public static void ShowWindow()
 		{
-			EditorWindow.GetWindow<SnipeApiDownloader>("SnipeApi");
-		}
-
-		protected void OnEnable()
-		{
-			SnipeToolsConfig.Load();
-
-			FindSnipeApiDirectory();
-
-			if (SnipeAutoUpdater.AutoUpdateEnabled)
-			{
-				SnipeAutoUpdater.CheckUpdateAvailable();
-			}
+			EditorWindow.GetWindow<SnipeApiDownloadWindow>("SnipeApi");
 		}
 
 		private void FindSnipeApiDirectory()
@@ -69,60 +65,70 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private void OnGUI()
+		public void CreateGUI()
 		{
-			EditorGUILayout.Space();
+			SnipeToolsConfig.Load();
 
-			EditorGUIUtility.labelWidth = 100;
+			FindSnipeApiDirectory();
 
-			SnipeToolsGUI.DrawAuthKeyWidget();
+			if (SnipeAutoUpdater.AutoUpdateEnabled)
+			{
+				SnipeAutoUpdater.CheckUpdateAvailable();
+			}
 
-			EditorGUILayout.Space();
+			//-------
 
-			bool auth_valid = (!string.IsNullOrEmpty(SnipeToolsConfig.AuthKey) && SnipeToolsConfig.ProjectId > 0);
+			var root = rootVisualElement;
+			UIUtility.LoadUI(root, "SnipeApiDownloadWindow", "base");
 
-			EditorGUI.BeginDisabledGroup(!auth_valid);
+			_directoryField = root.Q<TextField>("directory");
+			_browseButton = root.Q<Button>("btn-browse");
+			_versionLabel = root.Q<Label>("version-label");
+			_downloadButton = root.Q<Button>("btn-download");
+			_authKeyWidget = root.Q<AuthKeyWidget>("auth-key-widget");
 
-			EditorGUILayout.Space();
-			EditorGUILayout.Space();
+			_versionLabel.text = "Snipe API Service Version: " + SNIPE_VERSION_SUFFIX;
 
-			GUILayout.BeginHorizontal();
-			_directoryPath = EditorGUILayout.TextField("Directory", _directoryPath);
-			if (GUILayout.Button("...", GUILayout.Width(40)))
+			_directoryField.value = string.IsNullOrEmpty(_directoryPath) ? Application.dataPath : _directoryPath;
+			_directoryField.RegisterValueChangedCallback(evt => _directoryPath = evt.newValue);
+
+			_browseButton.clicked += () =>
 			{
 				string filename = SERVICE_FILE_NAME;
 				string path = EditorUtility.SaveFolderPanel($"Choose location of {filename}", _directoryPath, "");
 				if (!string.IsNullOrEmpty(path))
 				{
 					_directoryPath = path;
+					_directoryField.value = path;
 				}
-			}
-			GUILayout.EndHorizontal();
+			};
 
-			EditorGUILayout.Space();
+			SetControlsEnabled(SnipeToolsConfig.IsAuthKeyValid);
 
-			EditorGUILayout.BeginHorizontal();
-
-			EditorGUI.BeginDisabledGroup(true);
-			GUILayout.Label("Snipe API Service Version: " + SNIPE_VERSION_SUFFIX);
-			EditorGUI.EndDisabledGroup();
-
-			GUILayout.FlexibleSpace();
-
-			if (GUILayout.Button("Download"))
-			{
-				DownloadSnipeApiAndClose();
-			}
-			EditorGUILayout.EndHorizontal();
-			EditorGUI.EndDisabledGroup();
+			_downloadButton.clicked += OnDownloadButtonPressed;
 		}
 
-		private async void DownloadSnipeApiAndClose()
+		private void SetControlsEnabled(bool enabled)
 		{
-			await DownloadSnipeApi();
-			await Task.Yield();
-			AssetDatabase.Refresh();
-			this.Close();
+			_directoryField?.SetEnabled(enabled);
+			_browseButton?.SetEnabled(enabled);
+			_downloadButton?.SetEnabled(enabled);
+			_authKeyWidget?.SetEnabled(enabled);
+		}
+
+		private async void OnDownloadButtonPressed()
+		{
+			SetControlsEnabled(false);
+			try
+			{
+				await DownloadSnipeApi();
+				await Task.Yield();
+				AssetDatabase.Refresh();
+			}
+			finally
+			{
+				SetControlsEnabled(true);
+			}
 		}
 
 		public async Task DownloadSnipeApi()

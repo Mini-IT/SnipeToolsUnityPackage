@@ -3,6 +3,8 @@
 using System.Collections.Generic;
 using MiniIT.Snipe.Debugging;
 using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
@@ -44,32 +46,71 @@ namespace MiniIT.Snipe.Unity.Editor
 					}
 				}
 			}
+
+			RefreshUI();
 		}
 
-		private void OnGUI()
+		public void CreateGUI()
 		{
-			if (_tracker == null)
+			var root = rootVisualElement;
+			UIUtility.LoadUI(root, "ErrorCodesHighlightWindow", "base");
+		}
+
+		private void RefreshUI()
+		{
+			var root = rootVisualElement;
+
+			var search = root.Q<ToolbarSearchField>("search");
+			var groupsList = root.Q<ListView>("groups");
+			var itemsList = root.Q<ListView>("items");
+
+			var groups = new List<string>(_groupedMessages.Keys);
+			groupsList.itemsSource = groups;
+			groupsList.makeItem = () => new Label();
+			groupsList.bindItem = (e, i) => ((Label)e).text = $"{groups[i]} ({_groupedMessages[groups[i]].Count})";
+			groupsList.onSelectionChange += selected =>
 			{
-				return;
-			}
-
-			EditorGUILayout.BeginVertical();
-
-			foreach (var msg in _groupedMessages)
-			{
-				EditorGUILayout.Foldout(true, $"{msg.Key} ({msg.Value.Count})", true);
-
-				EditorGUI.indentLevel++;
-
-				foreach (string item in msg.Value)
+				foreach (var obj in selected)
 				{
-					EditorGUILayout.TextField(item);
+					if (obj is string key)
+					{
+						SetItems(itemsList, _groupedMessages[key]);
+					}
+					break;
 				}
+			};
 
-				EditorGUI.indentLevel--;
-			}
+			SetItems(itemsList, groups.Count > 0 ? _groupedMessages[groups[0]] : null);
 
-			EditorGUILayout.EndVertical();
+			search.RegisterValueChangedCallback(evt =>
+			{
+				string term = evt.newValue?.Trim();
+				if (string.IsNullOrEmpty(term))
+				{
+					groupsList.itemsSource = groups;
+					groupsList.Rebuild();
+					return;
+				}
+				var filtered = new List<string>();
+				foreach (var g in groups)
+				{
+					if (g.IndexOf(term, System.StringComparison.OrdinalIgnoreCase) >= 0)
+					{
+						filtered.Add(g);
+					}
+				}
+				groupsList.itemsSource = filtered;
+				groupsList.Rebuild();
+			});
+		}
+
+		private static void SetItems(ListView list, List<string> items)
+		{
+			items ??= new List<string>();
+			list.itemsSource = items;
+			list.makeItem = () => new TextField() { isReadOnly = true };
+			list.bindItem = (e, i) => ((TextField)e).value = items[i];
+			list.Rebuild();
 		}
 	}
 }

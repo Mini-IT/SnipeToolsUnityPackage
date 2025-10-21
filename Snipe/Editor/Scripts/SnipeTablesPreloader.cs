@@ -26,11 +26,11 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		public void OnPreprocessBuild(BuildReport report)
 		{
-			Debug.Log("[SnipeTablesPreloader] OnPreprocessBuild - started");
+			Log("OnPreprocessBuild - started");
 
 			Load();
 
-			Debug.Log("[SnipeTablesPreloader] OnPreprocessBuild - finished");
+			Log("OnPreprocessBuild - finished");
 		}
 
 		private static string GetTablesVersionFilePath()
@@ -76,23 +76,23 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				if (!loadingTask.IsCompletedSuccessfully || !loadingTask.Result)
 				{
-					Debug.LogError("[SnipeTablesPreloader] Loading FAILED");
+					LogError("Loading FAILED");
 #if UNITY_CLOUD_BUILD
 				throw new BuildFailedException("Failed to fetch tables list");
 #endif
 				}
 			}
 
-			Debug.Log("[SnipeTablesPreloader] Load - tables processing finished. Invoking AssetDatabase.Refresh");
+			Log("Load - tables processing finished. Invoking AssetDatabase.Refresh");
 
 			AssetDatabase.Refresh();
 
-			Debug.Log("[SnipeTablesPreloader] Load - done");
+			Log("Load - done");
 		}
 
 		private static async Task<bool> Load(HttpClient httpClient)
 		{
-			Debug.Log("[SnipeTablesPreloader] Load - started");
+			Log("Load - started");
 
 			s_streamingAssetsPath = Application.streamingAssetsPath;
 
@@ -108,7 +108,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				if (retry < LOADING_RETIES_COUNT - 1)
 				{
-					Debug.Log($"[SnipeTablesPreloader] - DownloadTablesList FAILED - retry {retry}");
+					Log($"- DownloadTablesList FAILED - retry {retry}");
 					await Task.Delay(1000 * (retry + 1));
 				}
 				else // no more reties
@@ -119,11 +119,11 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			if (s_versions == null || s_versions.Count == 0)
 			{
-				Debug.Log("[SnipeTablesPreloader] - Tables list is empty");
+				Log("- Tables list is empty");
 				return tablesListReady;
 			}
 
-			Debug.Log("[SnipeTablesPreloader] Total tables count = " + s_versions.Count);
+			Log("Total tables count = " + s_versions.Count);
 
 			var files = Directory.EnumerateFiles(s_streamingAssetsPath, "*.jsongz*");
 			foreach (string filename in files)
@@ -132,7 +132,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				{
 					if (filename.ToLower().Contains($"_{tablename.ToLower()}."))
 					{
-						Debug.Log("[SnipeTablesPreloader] Delete " + filename);
+						Log("Delete " + filename);
 						if (File.Exists(filename))
 						{
 							File.Delete(filename);
@@ -150,7 +150,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			foreach (string tablename in s_versions.Keys)
 			{
-				Debug.Log($"[SnipeTablesPreloader] {tablename} - start loading");
+				Log($"{tablename} - start loading");
 
 				using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(18));
 				var loadingTask = LoadTable(tablename, httpClient, cancellation.Token);
@@ -168,7 +168,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					return false;
 				}
 
-				Debug.Log($"[SnipeTablesPreloader] {tablename} - finish loading");
+				Log($"{tablename} - finish loading");
 			}
 
 			return true;
@@ -176,7 +176,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		public static bool DownloadTablesList(HttpClient httpClient)
 		{
-			Debug.Log("[SnipeTablesPreloader] DownloadTablesList - start");
+			Log("DownloadTablesList - start");
 
 			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			{
@@ -184,38 +184,41 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			{
-				Debug.Log("[SnipeTablesPreloader] - FAILED - invalid AuthKey");
+				Log("- FAILED - invalid AuthKey");
 				return false;
 			}
 			if (SnipeToolsConfig.ProjectId <= 0)
 			{
-				Debug.Log("[SnipeTablesPreloader] - FAILED - invalid project id");
+				Log("- FAILED - invalid project id");
 				return false;
 			}
 
 
-			Debug.Log($"[SnipeTablesPreloader] project id = {SnipeToolsConfig.ProjectId}");
+			Log($"project id = {SnipeToolsConfig.ProjectId}");
 
-			Debug.Log($"[SnipeTablesPreloader] Fetching projects list");
+			Log($"Fetching projects list");
 
-			string projectStringID = FetchProjectID(httpClient);
+			string projectStringID = SnipeToolsConfig.GetProjectStringID();
 			if (string.IsNullOrEmpty(projectStringID))
 			{
+				Log("Project String ID is null");
 				return false;
 			}
 
-			Debug.Log($"[SnipeTablesPreloader] Fetching tables list for project {projectStringID}");
+			projectStringID = UnstripProjectStringID(projectStringID);
+
+			Log($"Fetching tables list for project {projectStringID}");
 
 			s_tablesUrl = GetTablesBaseUrl(projectStringID);
 
-			Debug.Log($"[SnipeTablesPreloader] TablesUrl = {s_tablesUrl}");
+			Log($"TablesUrl = {s_tablesUrl}");
 
 			try
 			{
 				string url = GetVersionsUrl();
 				var content = httpClient.GetStringAsync(url).Result;
 
-				Debug.Log($"[SnipeTablesPreloader] {content}");
+				Log($"{content}");
 
 				using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
 				{
@@ -227,46 +230,46 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			catch (Exception e)
 			{
-				Debug.Log($"[SnipeTablesPreloader] FAILED to fetch tables list: {e}");
+				Log($"FAILED to fetch tables list: {e}");
 				return false;
 			}
 
-			Debug.Log("[SnipeTablesPreloader] DownloadTablesList - done");
+			Log("DownloadTablesList - done");
 			return true;
 		}
 
-		private static string FetchProjectID(HttpClient httpClient)
-		{
-			string projectStringID;
-
-			try
-			{
-				httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/stringID";
-				var content = httpClient.GetStringAsync(url).Result;
-
-				Debug.Log($"[SnipeTablesPreloader] {content}");
-
-				var responseData = fastJSON.JSON.ToObject<ProjectStringIdResponseData>(content);
-				projectStringID = responseData.stringID;
-				Debug.Log($"[SnipeTablesPreloader] Project StringID request errorCode = {responseData.errorCode}");
-				Debug.Log($"[SnipeTablesPreloader] Project StringID = {projectStringID}");
-			}
-			catch (Exception e)
-			{
-				Debug.LogError($"[SnipeTablesPreloader] FAILED to fetch projects list: {e}");
-				return null;
-			}
-
-			return projectStringID;
-		}
+		// private static string FetchProjectID(HttpClient httpClient)
+		// {
+		// 	string projectStringID;
+		//
+		// 	try
+		// 	{
+		// 		httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
+		// 		string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/stringID";
+		// 		var content = httpClient.GetStringAsync(url).Result;
+		//
+		// 		Log($"{content}");
+		//
+		// 		var responseData = fastJSON.JSON.ToObject<ProjectStringIdResponseData>(content);
+		// 		projectStringID = responseData.stringID;
+		// 		Log($"Project StringID request errorCode = {responseData.errorCode}");
+		// 		Log($"Project StringID = {projectStringID}");
+		// 	}
+		// 	catch (Exception e)
+		// 	{
+		// 		LogError($"FAILED to fetch projects list: {e}");
+		// 		return null;
+		// 	}
+		//
+		// 	return projectStringID;
+		// }
 
 		private static void ParseVersions(string json)
 		{
 			var listWrapper = fastJSON.JSON.ToObject<TablesListResponseListWrapper>(json);
 			if (listWrapper.tables is List<TablesListResponseListItem> list)
 			{
-				Debug.Log($"[SnipeTablesPreloader] Parsed tables count = {list.Count}");
+				Log($"Parsed tables count = {list.Count}");
 
 				s_versions = new Dictionary<string, string>();
 
@@ -284,13 +287,13 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			if (!s_versions.TryGetValue(tableName, out string version))
 			{
-				Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + tableName + " - Version unknown");
+				LogError("Failed to load table - " + tableName + " - Version unknown");
 				return false;
 			}
 
 			string url = GetTableUrl(tableName, version);
 
-			Debug.Log("[SnipeTablesPreloader] Loading table " + url);
+			Log("Loading table " + url);
 
 			try
 			{
@@ -305,20 +308,20 @@ namespace MiniIT.Snipe.Unity.Editor
 
 						if (loaderTask.IsFaulted || loaderTask.IsCanceled || !loaderTask.Result.IsSuccessStatusCode)
 						{
-							Debug.LogError($"[SnipeTablesPreloader] Failed to load table - {tableName}   (loader failed) - StatusCode: {loaderTask.Result.StatusCode}");
+							LogError($"Failed to load table - {tableName}   (loader failed) - StatusCode: {loaderTask.Result.StatusCode}");
 						}
 
 						response = loaderTask.Result;
 					}
 					catch (OperationCanceledException)
 					{
-						Debug.LogError($"[SnipeTablesPreloader] Failed to load table - {tableName} - cancelled");
+						LogError($"Failed to load table - {tableName} - cancelled");
 						Debug.Log($"cancellationToken.IsCancellationRequested = {cancellationToken.IsCancellationRequested}");
 						return false;
 					}
 					catch (Exception le)
 					{
-						Debug.LogError($"[SnipeTablesPreloader] Failed to load table - {tableName} - loader exception: {le}");
+						LogError($"Failed to load table - {tableName} - loader exception: {le}");
 					}
 
 					if (cancellationToken.IsCancellationRequested)
@@ -328,7 +331,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 					if (response != null)
 					{
-						Debug.Log($"[SnipeTablesPreloader] StatusCode: {response.StatusCode}");
+						Log($"StatusCode: {response.StatusCode}");
 
 						if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
 						{
@@ -338,7 +341,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 					if (retry < LOADING_RETIES_COUNT - 1)
 					{
-						Debug.Log($"[SnipeTablesPreloader] Failed to load table - {tableName}   (loader failed) - rety {retry}");
+						Log($"Failed to load table - {tableName}   (loader failed) - rety {retry}");
 						await Task.Delay(3000 * (retry + 1));
 					}
 
@@ -350,15 +353,15 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				if (response != null && !response.IsSuccessStatusCode)
 				{
-					Debug.LogError($"[SnipeTablesPreloader] LoadTable {tableName} - Failed - http error: {response.StatusCode}");
+					LogError($"LoadTable {tableName} - Failed - http error: {response.StatusCode}");
 					return false;
 				}
 
 				string cachePath = GetTableFilePath(tableName, version);
 
-				using (var file_content_stream = await response.Content.ReadAsStreamAsync())
+				using (var fileContentStream = await response.Content.ReadAsStreamAsync())
 				{
-					if (!SaveToCache(file_content_stream, cachePath))
+					if (!SaveToCache(fileContentStream, cachePath))
 					{
 						return false;
 					}
@@ -366,7 +369,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			catch (Exception e)
 			{
-				Debug.LogError("[SnipeTablesPreloader] Failed to load table - " + tableName + " - " + e.ToString());
+				LogError("Failed to load table - " + tableName + " - " + e.ToString());
 				return false;
 			}
 
@@ -385,16 +388,41 @@ namespace MiniIT.Snipe.Unity.Editor
 					}
 					content.CopyTo(cacheWriteStream);
 
-					Debug.Log("[SnipeTablesPreloader] Saved: " + cachePath);
+					Log("Saved: " + cachePath);
 				}
 				catch (Exception ex)
 				{
-					Debug.LogError("[SnipeTablesPreloader] Failed to save - " + cachePath + " - " + ex.ToString());
+					LogError("Failed to save - " + cachePath + " - " + ex.ToString());
 					return false;
 				}
 			}
 
 			return true;
+		}
+
+		public static string UnstripProjectStringID(string projectStringID)
+		{
+			if (projectStringID.EndsWith("_dev"))
+			{
+				return projectStringID;
+			}
+
+			if (projectStringID.EndsWith("_live"))
+			{
+				projectStringID = projectStringID[..^5];
+			}
+
+			return projectStringID + "_dev";
+		}
+
+		private static void Log(string message)
+		{
+			Debug.Log($"[{nameof(SnipeTablesPreloader)}] {message}");
+		}
+
+		private static void LogError(string message)
+		{
+			Debug.LogError($"[{nameof(SnipeTablesPreloader)}] {message}");
 		}
 
 		[System.Serializable]
@@ -408,13 +436,6 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			public string name;
 			public long version;
-		}
-
-		[System.Serializable]
-		internal class ProjectStringIdResponseData
-		{
-			public string errorCode;
-			public string stringID;
 		}
 
 	}

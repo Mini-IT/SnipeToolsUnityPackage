@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement class="root">
+        <MiniIT.Snipe.Unity.Editor.AuthKeyWidget />
+        <ui:VisualElement class="spacer" />
+        <ui:Toggle name="load-on-build-toggle" label="Load Config On Build" />
+        <ui:VisualElement class="spacer" />
+        <ui:VisualElement name="runtime-config-section">
+            <ui:TextField name="app-identifier" label="App Identifier" />
+            <ui:TextField name="app-version" label="App Version" />
+            <uie:EnumField name="platform" label="Platform" />
+            <uie:EnumField name="android-subplatform" label="SubPlatform (Android)" />
+            <uie:EnumField name="webgl-subplatform" label="SubPlatform (WebGL)" />
+            <ui:VisualElement class="row">
+                <ui:VisualElement style="flex-grow: 1;" />
+                <ui:Button name="btn-download-runtime" text="Download Runtime Config" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="buildtime-config-section">
+            <ui:VisualElement class="row">
+                <ui:DropdownField name="target-platform" label="Target Platform" style="flex-grow: 1; flex-basis: 0; min-width: 0;" />
+            </ui:VisualElement>
+	        <ui:VisualElement class="row">
+                <ui:VisualElement style="flex-grow: 1;" />
+                <ui:Button name="btn-download-buildtime" text="Download Buildtime Config" />
+			</ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="spacer" />
+        <ui:Label name="content-label" text="Current config content:" style="-unity-font-style: italic;" />
+        <ui:ScrollView name="content-scroll" style="flex-grow: 1;">
+            <ui:TextField name="content" multiline="true" />
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>
