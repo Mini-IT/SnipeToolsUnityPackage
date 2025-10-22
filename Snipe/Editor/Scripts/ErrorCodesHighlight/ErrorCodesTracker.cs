@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using MiniIT.Snipe.Debugging;
+using Snipe.Services.Analytics;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
-	public class ErrorCodesTracker : ISnipeErrorsTracker
+	public class ErrorCodesTracker : ISnipeErrorsTracker, ITestSnipeErrorTracker
 	{
 		internal List<IDictionary<string, object>> Items { get; } = new ();
 
@@ -15,6 +16,11 @@ namespace MiniIT.Snipe.Unity.Editor
 		public void Clear()
 		{
 			Items.Clear();
+		}
+
+		public IReadOnlyList<IDictionary<string, object>> GetItems()
+		{
+			return Items;
 		}
 	}
 }
