@@ -30,10 +30,9 @@ namespace MiniIT.Snipe.Unity.Editor
 			PersistentDataPath = Application.persistentDataPath;
 			StreamingAssetsPath = Application.streamingAssetsPath;
 
-			var info = SystemInformationExtractor.Instance.GetSystemInfo();
-			DeviceManufacturer = info.DeviceManufacturer;
-			OperatingSystemFamily = info.OperatingSystemFamily;
-			OperatingSystemVersion = info.OperatingSystemVersion;
+			DeviceManufacturer = SystemInfo.deviceModel;
+			OperatingSystemFamily = SystemInfo.operatingSystemFamily.ToString();
+			OperatingSystemVersion = SystemInfo.operatingSystem;
 		}
 	}
 }
