@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && SNIPE_8_0_OR_NEWER
 
 using System.Collections.Generic;
 using UnityEditor;
@@ -12,31 +12,26 @@ namespace MiniIT.Snipe.Unity.Editor
 		private ErrorCodesTracker _tracker;
 		private Dictionary<string, List<string>> _groupedMessages;
 
-		// [MenuItem("Snipe/ErrorCodes...")]
-		// public static void ShowWindow()
-		// {
-		// 	ShowWindow(new ErrorCodesTracker());
-		// }
-
 		public static void ShowWindow(ErrorCodesTracker tracker)
 		{
-			var window = EditorWindow.GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
+			var window = GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
 			window.Init(tracker);
 		}
 
 		private void Init(ErrorCodesTracker tracker)
 		{
 			_tracker = tracker;
-
 			_groupedMessages = new Dictionary<string, List<string>>(_tracker.Items.Count);
+
 			foreach (var item in _tracker.Items)
 			{
-				if (item.TryGetValue("message_type", out var msgtype) && msgtype is string messageType)
+				if (item.TryGetValue("message_type", out object msgType) && msgType is string messageType)
 				{
 					if (!_groupedMessages.ContainsKey(messageType))
 					{
 						_groupedMessages.Add(messageType, new List<string>());
 					}
+
 					_groupedMessages[messageType].Add(fastJSON.JSON.ToJSON(item));
 				}
 			}
