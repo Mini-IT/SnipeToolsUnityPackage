@@ -1,6 +1,6 @@
 {
   "name": "com.miniit.snipe.tools",
-  "version": "1.7.0-preview",
+  "version": "1.7.0",
   "dependencies": {
     "com.miniit.fastjson": "1.0.0",
     "com.cysharp.unitask": "2.3.0"
