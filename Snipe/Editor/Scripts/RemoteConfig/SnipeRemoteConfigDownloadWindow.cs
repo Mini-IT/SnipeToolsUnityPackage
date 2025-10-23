@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR && SNIPE_6_1_OR_NEWER
+﻿#if UNITY_EDITOR && SNIPE_7_1_OR_NEWER
 
 using System;
 using System.Collections.Generic;

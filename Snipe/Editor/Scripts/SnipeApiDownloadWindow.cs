@@ -1,6 +1,5 @@
 ﻿#if UNITY_EDITOR
 
-using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -18,10 +17,8 @@ namespace MiniIT.Snipe.Unity.Editor
 		private const string SNIPE_VERSION_SUFFIX = "V8";
 #elif SNIPE_7_1_OR_NEWER
 		private const string SNIPE_VERSION_SUFFIX = "V71";
-#elif SNIPE_7_0_OR_NEWER
-		private const string SNIPE_VERSION_SUFFIX = "V7";
 #else
-		private const string SNIPE_VERSION_SUFFIX = "V61";
+		private const string SNIPE_VERSION_SUFFIX = "V7";
 #endif
 
 		private const string SERVICE_FILE_NAME = "SnipeApiService.cs";
