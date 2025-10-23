@@ -1,0 +1,29 @@
+.auth-widget {
+	padding: 10px;
+	background-color: rgba(255, 255, 255, 0.16);
+}
+
+.auth-widget .row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 6px;
+}
+
+#project-string-id {
+	-unity-font-style: italic;
+}
+
+.helpbox {
+	padding: 6px;
+	border-left-width: 3px;
+	border-left-color: #6b6b6b;
+	border-left-style: solid;
+	background-color: rgba(107,107,107,0.08);
+}
+
+.helpbox.error {
+	border-left-color: #c94040;
+	background-color: rgba(201,64,64,0.08);
+}
+

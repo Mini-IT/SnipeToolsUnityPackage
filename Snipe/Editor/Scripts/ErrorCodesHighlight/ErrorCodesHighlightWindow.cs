@@ -1,7 +1,9 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && SNIPE_8_0_OR_NEWER
 
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
@@ -10,52 +12,94 @@ namespace MiniIT.Snipe.Unity.Editor
 		private ErrorCodesTracker _tracker;
 		private Dictionary<string, List<string>> _groupedMessages;
 
-		//[MenuItem("Snipe/ErrorCodes...")]
 		public static void ShowWindow(ErrorCodesTracker tracker)
 		{
-			var window = EditorWindow.GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
+			var window = GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
 			window.Init(tracker);
 		}
 
 		private void Init(ErrorCodesTracker tracker)
 		{
 			_tracker = tracker;
-
 			_groupedMessages = new Dictionary<string, List<string>>(_tracker.Items.Count);
+
 			foreach (var item in _tracker.Items)
 			{
-				if (item.TryGetValue("message_type", out var msgtype) && msgtype is string messageType)
+				if (item.TryGetValue("message_type", out object msgType) && msgType is string messageType)
 				{
 					if (!_groupedMessages.ContainsKey(messageType))
 					{
 						_groupedMessages.Add(messageType, new List<string>());
 					}
+
 					_groupedMessages[messageType].Add(fastJSON.JSON.ToJSON(item));
 				}
 			}
+
+			RefreshUI();
 		}
 
-		private void OnGUI()
+		public void CreateGUI()
 		{
-			if (_tracker == null)
-			{
-				return;
-			}
+			var root = rootVisualElement;
+			UIUtility.LoadUI(root, "ErrorCodesHighlightWindow", "base");
+		}
 
-			EditorGUILayout.BeginVertical();
+		private void RefreshUI()
+		{
+			var root = rootVisualElement;
 
-			foreach (var msg in _groupedMessages)
+			var search = root.Q<ToolbarSearchField>("search");
+			var groupsList = root.Q<ListView>("groups");
+			var itemsList = root.Q<ListView>("items");
+
+			var groups = new List<string>(_groupedMessages.Keys);
+			groupsList.itemsSource = groups;
+			groupsList.makeItem = () => new Label();
+			groupsList.bindItem = (e, i) => ((Label)e).text = $"{groups[i]} ({_groupedMessages[groups[i]].Count})";
+			groupsList.onSelectionChange += selected =>
 			{
-				EditorGUILayout.Foldout(true, $"{msg.Key} ({msg.Value.Count})", true);
-				EditorGUI.indentLevel++;
-				foreach (string item in msg.Value)
+				foreach (var obj in selected)
 				{
-					EditorGUILayout.TextField(item);
+					if (obj is string key)
+					{
+						SetItems(itemsList, _groupedMessages[key]);
+					}
+					break;
 				}
-				EditorGUI.indentLevel++;
-			}
+			};
 
-			EditorGUILayout.EndVertical();
+			SetItems(itemsList, groups.Count > 0 ? _groupedMessages[groups[0]] : null);
+
+			search.RegisterValueChangedCallback(evt =>
+			{
+				string term = evt.newValue?.Trim();
+				if (string.IsNullOrEmpty(term))
+				{
+					groupsList.itemsSource = groups;
+					groupsList.Rebuild();
+					return;
+				}
+				var filtered = new List<string>();
+				foreach (var g in groups)
+				{
+					if (g.IndexOf(term, System.StringComparison.OrdinalIgnoreCase) >= 0)
+					{
+						filtered.Add(g);
+					}
+				}
+				groupsList.itemsSource = filtered;
+				groupsList.Rebuild();
+			});
+		}
+
+		private static void SetItems(ListView list, List<string> items)
+		{
+			items ??= new List<string>();
+			list.itemsSource = items;
+			list.makeItem = () => new TextField() { isReadOnly = true };
+			list.bindItem = (e, i) => ((TextField)e).value = items[i];
+			list.Rebuild();
 		}
 	}
 }

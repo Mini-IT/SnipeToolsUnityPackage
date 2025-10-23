@@ -15,11 +15,11 @@ namespace MiniIT.Snipe.Unity.Editor
 		private const string PREF_AUTO_UPDATE_ENABLED = "Snipe.AutoUpdateEnabled";
 		private const string PREF_LAST_UPDATE_CHECK_ID = "Snipe.LastUpdateCheckId";
 		private const string PREF_LAST_UPDATE_CHECK_TS = "Snipe.LastUpdateCheckTS";
-		
+
 		private const string MENU_AUTO_UPDATE_ENABLED = "Snipe/Check for Updates Automatically";
-		
-		private static bool mProcessing = false;
-		private static PackageCollection mInstalledPackages;
+
+		private static bool s_processing = false;
+		private static PackageCollection s_installedPackages;
 
 		public static bool AutoUpdateEnabled
 		{
@@ -34,7 +34,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			Menu.SetChecked(MENU_AUTO_UPDATE_ENABLED, AutoUpdateEnabled);
 
 			ShowNotificationOrLog(AutoUpdateEnabled ? "Snipe auto update enabled" : "Snipe auto update disabled");
-			
+
 			if (AutoUpdateEnabled)
 			{
 				CheckUpdateAvailable();
@@ -48,28 +48,28 @@ namespace MiniIT.Snipe.Unity.Editor
 			Menu.SetChecked(MENU_AUTO_UPDATE_ENABLED, AutoUpdateEnabled);
 			return true;
 		}
-		
+
 		static SnipeAutoUpdater()
 		{
 #if !UNITY_CLOUD_BUILD
 			Run();
 #endif
 		}
-		
+
 		//[MenuItem("Snipe/Run Autoupdater")]
 		public static void Run()
 		{
 			if (AutoUpdateEnabled)
 			{
-				bool check_needed = EditorPrefs.GetInt(PREF_LAST_UPDATE_CHECK_ID, 0) != (int)EditorAnalyticsSessionInfo.id;
-				if (!check_needed)
+				bool checkNeeded = EditorPrefs.GetInt(PREF_LAST_UPDATE_CHECK_ID, 0) != (int)EditorAnalyticsSessionInfo.id;
+				if (!checkNeeded)
 				{
-					var check_ts = EditorPrefs.GetInt(PREF_LAST_UPDATE_CHECK_TS, 0);
-					var passed = DateTime.UtcNow - DateTimeOffset.FromUnixTimeSeconds(check_ts).UtcDateTime;
-					check_needed = passed.TotalHours >= 12;
+					var checkTs = EditorPrefs.GetInt(PREF_LAST_UPDATE_CHECK_TS, 0);
+					var passed = DateTime.UtcNow - DateTimeOffset.FromUnixTimeSeconds(checkTs).UtcDateTime;
+					checkNeeded = passed.TotalHours >= 12;
 				}
-				
-				if (check_needed)
+
+				if (checkNeeded)
 				{
 					CheckUpdateAvailable();
 				}
@@ -83,115 +83,115 @@ namespace MiniIT.Snipe.Unity.Editor
 			else
 				Debug.Log($"[SnipeAutoUpdater] {msg}"); // When there's no scene view opened, we just print a log
 		}
-		
+
 		public static async void CheckUpdateAvailable()
 		{
-			if (mProcessing)
+			if (s_processing)
 				return;
-			mProcessing = true;
-			
+			s_processing = true;
+
 			Debug.Log("[SnipeAutoUpdater] CheckUpdateAvailable");
 
-			SnipeUpdater.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
-			SnipeUpdater.InstalledPackagesListFetched += OnInstalledPackagesListFetched;
-			await SnipeUpdater.FetchVersionsList();
-			
-			if (SnipeUpdater.SnipePackageVersions != null && SnipeUpdater.SnipePackageVersions.Length > 0)
+			SnipeUpdateWindow.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
+			SnipeUpdateWindow.InstalledPackagesListFetched += OnInstalledPackagesListFetched;
+			await SnipeUpdateWindow.FetchVersionsList();
+
+			if (SnipeUpdateWindow.SnipePackageVersions != null && SnipeUpdateWindow.SnipePackageVersions.Length > 0)
 			{
-				string current_version_code = SnipeUpdater.CurrentSnipePackageVersionIndex >= 0 ?
-					SnipeUpdater.SnipePackageVersions[SnipeUpdater.CurrentSnipePackageVersionIndex] :
+				string currentVersionCode = SnipeUpdateWindow.CurrentSnipePackageVersionIndex >= 0 ?
+					SnipeUpdateWindow.SnipePackageVersions[SnipeUpdateWindow.CurrentSnipePackageVersionIndex] :
 					"unknown";
-					
-				Debug.Log($"[SnipeAutoUpdater] Current version (detected): {current_version_code}");
-				
-				if (TryParseVersion(current_version_code, out int[] version))
+
+				Debug.Log($"[SnipeAutoUpdater] Current version (detected): {currentVersionCode}");
+
+				if (TryParseVersion(currentVersionCode, out int[] version))
 				{
-					string newer_version_code = null;
-					int[] newer_version = null;
-					
-					for (int i = 0; i < SnipeUpdater.SnipePackageVersions.Length; i++)
+					string newerVersionCode = null;
+					int[] newerVersion = null;
+
+					for (int i = 0; i < SnipeUpdateWindow.SnipePackageVersions.Length; i++)
 					{
-						if (i == SnipeUpdater.CurrentSnipePackageVersionIndex)
+						if (i == SnipeUpdateWindow.CurrentSnipePackageVersionIndex)
 							continue;
-						
-						string ver_name = SnipeUpdater.SnipePackageVersions[i];
-						if (TryParseVersion(ver_name, out int[] ver) && CheckVersionGreater(newer_version ?? version, ver))
+
+						string verName = SnipeUpdateWindow.SnipePackageVersions[i];
+						if (TryParseVersion(verName, out int[] ver) && CheckVersionGreater(newerVersion ?? version, ver))
 						{
-							newer_version_code = ver_name;
-							newer_version = ver;
+							newerVersionCode = verName;
+							newerVersion = ver;
 						}
 					}
-					
-					if (!string.IsNullOrEmpty(newer_version_code))
+
+					if (!string.IsNullOrEmpty(newerVersionCode))
 					{
-						Debug.Log($"[SnipeAutoUpdater] A newer version found: {newer_version_code}");
-						
+						Debug.Log($"[SnipeAutoUpdater] A newer version found: {newerVersionCode}");
+
 						if (EditorUtility.DisplayDialog("Snipe Auto Updater",
-							$"Snipe {newer_version_code}\n\nNewer version found.\n(Installed version is {current_version_code})",
+							$"Snipe {newerVersionCode}\n\nNewer version found.\n(Installed version is {currentVersionCode})",
 							"Update now", "Dismiss"))
 						{
-							SnipeUpdater.InstallSnipePackage(newer_version_code);
+							SnipeUpdateWindow.InstallSnipePackage(newerVersionCode);
 						}
 					}
 				}
 			}
-			
+
 			EditorPrefs.SetInt(PREF_LAST_UPDATE_CHECK_ID, (int)EditorAnalyticsSessionInfo.id);
 			EditorPrefs.SetInt(PREF_LAST_UPDATE_CHECK_TS, (int)new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds());
-			
-			mProcessing = false;
-			
-			SnipeToolsAutoUpdater.CheckUpdateAvailable(mInstalledPackages);
+
+			s_processing = false;
+
+			SnipeToolsAutoUpdater.CheckUpdateAvailable(s_installedPackages);
 #if UNITY_2020_1_OR_NEWER
-			AdvertisingIdFetcherInstaller.CheckAndInstall(mInstalledPackages);
+			AdvertisingIdFetcherInstaller.CheckAndInstall(s_installedPackages);
 #endif
 		}
 
 		private static void OnInstalledPackagesListFetched(PackageCollection installedPackages)
 		{
-			SnipeUpdater.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
-			mInstalledPackages = installedPackages;
+			SnipeUpdateWindow.InstalledPackagesListFetched -= OnInstalledPackagesListFetched;
+			s_installedPackages = installedPackages;
 		}
 
-		internal static bool TryParseVersion(string version_string, out int[] version)
+		internal static bool TryParseVersion(string versionString, out int[] version)
 		{
-			string[] version_code = version_string.Split('.');
-			if (version_code != null && version_code.Length == 3)
+			string[] versionCode = versionString.Split('.');
+			if (versionCode != null && versionCode.Length == 3)
 			{
-				version = new int[version_code.Length];
-				bool parsing_failed = false;
-				for (int i = 0; i < version_code.Length; i++)
+				version = new int[versionCode.Length];
+				bool parsingFailed = false;
+				for (int i = 0; i < versionCode.Length; i++)
 				{
-					if (!int.TryParse(version_code[i], out version[i]))
+					if (!int.TryParse(versionCode[i], out version[i]))
 					{
-						parsing_failed = true;
+						parsingFailed = true;
 						break;
 					}
 				}
-				
-				if (!parsing_failed)
+
+				if (!parsingFailed)
 				{
 					return true;
 				}
 			}
-			
+
 			version = null;
 			return false;
 		}
-		
-		internal static bool CheckVersionGreater(int[] current_version, int[] check_version)
+
+		internal static bool CheckVersionGreater(int[] currentVersion, int[] checkVersion)
 		{
-			if (check_version[0] < current_version[0])
+			if (checkVersion[0] < currentVersion[0])
 				return false;
-			if (check_version[0] > current_version[0])
+			if (checkVersion[0] > currentVersion[0])
 				return true;
-			if (check_version[1] < current_version[1])
+			if (checkVersion[1] < currentVersion[1])
 				return false;
-			if (check_version[1] > current_version[1])
+			if (checkVersion[1] > currentVersion[1])
 				return true;
-			if (check_version[2] < current_version[2])
+			if (checkVersion[2] < currentVersion[2])
 				return false;
-			return (check_version[2] > current_version[2]);
+			return (checkVersion[2] > currentVersion[2]);
 		}
 	}
 
