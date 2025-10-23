@@ -1,7 +1,6 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && SNIPE_8_0_OR_NEWER
 
 using System.Collections.Generic;
-using MiniIT.Snipe.Debugging;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
@@ -13,21 +12,21 @@ namespace MiniIT.Snipe.Unity.Editor
 		private ErrorCodesTracker _tracker;
 		private Dictionary<string, List<string>> _groupedMessages;
 
-		//[MenuItem("Snipe/ErrorCodes")] only for tests
-		public static void ShowWindow()
+		// [MenuItem("Snipe/ErrorCodes")] // only for tests
+		// public static void ShowWindow()
+		// {
+		// 	ShowWindow(UnitySnipeServicesFactory.DebugErrorsTracker as ErrorCodesTracker);
+		// }
+
+		public static void ShowWindow(ErrorCodesTracker tracker)
 		{
 			var window = GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
-			window.Init(UnitySnipeServicesFactory.DebugErrorsTracker);
+			window.Init(tracker);
 		}
 
-		private void Init(ISnipeErrorsTracker tracker)
+		private void Init(ErrorCodesTracker tracker)
 		{
-			if (tracker is not ErrorCodesTracker errorTracker)
-			{
-				return;
-			}
-
-			_tracker = errorTracker;
+			_tracker = tracker;
 
 			if (_tracker != null)
 			{

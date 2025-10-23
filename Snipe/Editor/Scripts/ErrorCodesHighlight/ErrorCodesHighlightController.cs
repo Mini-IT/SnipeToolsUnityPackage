@@ -1,7 +1,5 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && SNIPE_8_0_OR_NEWER
 
-using System.Collections.Generic;
-using MiniIT.Snipe.Debugging;
 using UnityEditor;
 
 namespace MiniIT.Snipe.Unity.Editor
@@ -28,9 +26,9 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			else if (state == PlayModeStateChange.ExitingPlayMode)
 			{
-				if (s_tracker != null && s_tracker.Items.Count > 0)
+				if (s_tracker == UnitySnipeServicesFactory.DebugErrorsTracker && s_tracker.Items.Count > 0)
 				{
-					ErrorCodesHighlightWindow.ShowWindow();
+					ErrorCodesHighlightWindow.ShowWindow(s_tracker);
 				}
 			}
 		}
