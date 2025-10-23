@@ -11,6 +11,10 @@ namespace MiniIT.Snipe.Unity.Editor
 		public string PersistentDataPath { get; set; }
 		public string StreamingAssetsPath { get; set; }
 
+		public string DeviceManufacturer { get; }
+		public string OperatingSystemFamily { get; }
+		public string OperatingSystemVersion { get; }
+
 		public MockApplicationInfo()
 		{
 			ApplicationIdentifier = Application.identifier;
@@ -25,6 +29,10 @@ namespace MiniIT.Snipe.Unity.Editor
 			DeviceIdentifier = SystemInfo.deviceUniqueIdentifier;
 			PersistentDataPath = Application.persistentDataPath;
 			StreamingAssetsPath = Application.streamingAssetsPath;
+
+			DeviceManufacturer = SystemInfo.deviceModel;
+			OperatingSystemFamily = SystemInfo.operatingSystemFamily.ToString();
+			OperatingSystemVersion = SystemInfo.operatingSystem;
 		}
 	}
 }
