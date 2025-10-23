@@ -1,3 +1,7 @@
+#if SNIPE_8_1_OR_NEWER || (SNIPE_7_5_OR_NEWER && !SNIPE_8_0_OR_NEWER)
+#define SYSTEM_INFO
+#endif
+
 using UnityEngine;
 
 namespace MiniIT.Snipe.Unity.Editor
@@ -11,7 +15,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		public string PersistentDataPath { get; set; }
 		public string StreamingAssetsPath { get; set; }
 
-#if SNIPE_8_1_OR_NEWER
+#if SYSTEM_INFO
 		public string DeviceManufacturer { get; }
 		public string OperatingSystemFamily { get; }
 		public string OperatingSystemVersion { get; }
@@ -32,7 +36,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			PersistentDataPath = Application.persistentDataPath;
 			StreamingAssetsPath = Application.streamingAssetsPath;
 
-#if SNIPE_8_1_OR_NEWER
+#if SYSTEM_INFO
 			DeviceManufacturer = SystemInfo.deviceModel;
 			OperatingSystemFamily = SystemInfo.operatingSystemFamily.ToString();
 			OperatingSystemVersion = SystemInfo.operatingSystem;

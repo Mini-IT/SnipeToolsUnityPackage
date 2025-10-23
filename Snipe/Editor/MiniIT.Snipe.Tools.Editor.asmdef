@@ -25,6 +25,11 @@
         },
 		{
 			"name": "com.miniit.snipe.client",
+			"expression": "7.5.0",
+			"define": "SNIPE_7_5_OR_NEWER"
+		},
+		{
+			"name": "com.miniit.snipe.client",
 			"expression": "8.0.0",
 			"define": "SNIPE_8_0_OR_NEWER"
 		},
