@@ -12,12 +12,6 @@ namespace MiniIT.Snipe.Unity.Editor
 		private ErrorCodesTracker _tracker;
 		private Dictionary<string, List<string>> _groupedMessages;
 
-		// [MenuItem("Snipe/ErrorCodes")] // only for tests
-		// public static void ShowWindow()
-		// {
-		// 	ShowWindow(UnitySnipeServicesFactory.DebugErrorsTracker as ErrorCodesTracker);
-		// }
-
 		public static void ShowWindow(ErrorCodesTracker tracker)
 		{
 			var window = GetWindow<ErrorCodesHighlightWindow>(true, "Snipe ErrorCodes", true);
@@ -27,22 +21,18 @@ namespace MiniIT.Snipe.Unity.Editor
 		private void Init(ErrorCodesTracker tracker)
 		{
 			_tracker = tracker;
+			_groupedMessages = new Dictionary<string, List<string>>(_tracker.Items.Count);
 
-			if (_tracker != null)
+			foreach (var item in _tracker.Items)
 			{
-				_groupedMessages = new Dictionary<string, List<string>>(_tracker.Items.Count);
-
-				foreach (var item in _tracker.Items)
+				if (item.TryGetValue("message_type", out object msgType) && msgType is string messageType)
 				{
-					if (item.TryGetValue("message_type", out object msgType) && msgType is string messageType)
+					if (!_groupedMessages.ContainsKey(messageType))
 					{
-						if (!_groupedMessages.ContainsKey(messageType))
-						{
-							_groupedMessages.Add(messageType, new List<string>());
-						}
-
-						_groupedMessages[messageType].Add(fastJSON.JSON.ToJSON(item));
+						_groupedMessages.Add(messageType, new List<string>());
 					}
+
+					_groupedMessages[messageType].Add(fastJSON.JSON.ToJSON(item));
 				}
 			}
 
