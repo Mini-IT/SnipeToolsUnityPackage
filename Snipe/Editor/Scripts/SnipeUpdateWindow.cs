@@ -158,7 +158,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		public static AddRequest InstallSnipeToolsPackage()
 		{
-			return Client.Add($"{Packages.SnipeTools.Url}");
+			return Client.Add(Packages.SnipeTools.Url);
 		}
 
 		public static async Task FetchVersionsList()
