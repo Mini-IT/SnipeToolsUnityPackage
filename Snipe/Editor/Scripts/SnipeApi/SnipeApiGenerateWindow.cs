@@ -1,17 +1,15 @@
-﻿#if UNITY_EDITOR
+#if UNITY_EDITOR
 
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using UnityEditor;
-using UnityEngine.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 using Debug = UnityEngine.Debug;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
-	public class SnipeApiDownloadWindow : EditorWindow
+	public class SnipeApiGenerateWindow : EditorWindow
 	{
 #if SNIPE_8_0_OR_NEWER
 		private const string SNIPE_VERSION_SUFFIX = "V8";
@@ -28,19 +26,19 @@ namespace MiniIT.Snipe.Unity.Editor
 		private TextField _directoryField;
 		private Button _browseButton;
 		private Label _versionLabel;
-		private Button _downloadButton;
+		private Button _generateButton;
 		private AuthKeyWidget _authKeyWidget;
 
-		[MenuItem("Snipe/Download SnipeApi...")]
+		[MenuItem("Snipe/Generate SnipeApi...")]
 		public static void ShowWindow()
 		{
-			EditorWindow.GetWindow<SnipeApiDownloadWindow>("SnipeApi");
+			EditorWindow.GetWindow<SnipeApiGenerateWindow>("SnipeApi");
 		}
 
 		private void FindSnipeApiDirectory()
 		{
 			string[] results = AssetDatabase.FindAssets("SnipeApi");
-			if (results != null && results.Length > 0)
+            if (results != null && results.Length > 0)
 			{
 				for (int i = 0; i < results.Length; i++)
 				{
@@ -81,7 +79,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			_directoryField = root.Q<TextField>("directory");
 			_browseButton = root.Q<Button>("btn-browse");
 			_versionLabel = root.Q<Label>("version-label");
-			_downloadButton = root.Q<Button>("btn-download");
+			_generateButton = root.Q<Button>("btn-download");
 			_authKeyWidget = root.Q<AuthKeyWidget>("auth-key-widget");
 
 			_versionLabel.text = "Snipe API Service Version: " + SNIPE_VERSION_SUFFIX;
@@ -102,23 +100,23 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			SetControlsEnabled(SnipeToolsConfig.IsAuthKeyValid);
 
-			_downloadButton.clicked += OnDownloadButtonPressed;
+			_generateButton.clicked += OnGenerateButtonPressed;
 		}
 
 		private void SetControlsEnabled(bool enabled)
 		{
 			_directoryField?.SetEnabled(enabled);
 			_browseButton?.SetEnabled(enabled);
-			_downloadButton?.SetEnabled(enabled);
+			_generateButton?.SetEnabled(enabled);
 			_authKeyWidget?.SetEnabled(enabled);
 		}
 
-		private async void OnDownloadButtonPressed()
+		private async void OnGenerateButtonPressed()
 		{
 			SetControlsEnabled(false);
 			try
 			{
-				await DownloadSnipeApi();
+				await GenerateSnipeApi();
 				await Task.Yield();
 				AssetDatabase.Refresh();
 			}
@@ -128,40 +126,29 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		public async Task DownloadSnipeApi()
+		public async Task GenerateSnipeApi()
 		{
-			Debug.Log("DownloadSnipeApi - start");
+			Debug.Log("SnipeApiGenerateWindow.GenerateSnipeApi - start");
 
 			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			{
-				Debug.LogError("DownloadSnipeApi - FAILED to get token");
+				Debug.LogError("SnipeApiGenerateWindow.GenerateSnipeApi - FAILED to get token");
 				return;
 			}
 
-			using (var loader = new HttpClient())
+			// ensure directory exists
+			if (!Directory.Exists(_directoryPath))
 			{
-				loader.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/unityBindings{SNIPE_VERSION_SUFFIX}";
-
-				var response = await loader.GetAsync(url);
-
-				if (!response.IsSuccessStatusCode)
-				{
-					Debug.LogError($"DownloadSnipeApi - FAILED to get token; HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
-					return;
-				}
-
-				string filePath = Path.Combine(_directoryPath, SERVICE_FILE_NAME);
-
-				using (StreamWriter sw = File.CreateText(filePath))
-				{
-					await response.Content.CopyToAsync(sw.BaseStream);
-				}
+				Directory.CreateDirectory(_directoryPath);
 			}
 
-			Debug.Log("DownloadSnipeApi - done");
+			await SnipeApiGenerator.GenerateAsync(_directoryPath);
+
+			Debug.Log("SnipeApiGenerateWindow.GenerateSnipeApi - done");
 		}
 	}
 }
 
 #endif // UNITY_EDITOR
+
+
