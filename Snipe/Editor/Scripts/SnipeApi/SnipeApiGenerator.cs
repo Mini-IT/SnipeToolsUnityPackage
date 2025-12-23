@@ -65,8 +65,8 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		private static void GenerateFileHeader(StringBuilder sb, MetagenRoot root)
 		{
-			var projectId = string.IsNullOrEmpty(root.projectStringID) ? root.projectID.ToString() : root.projectStringID;
-			var version = string.IsNullOrEmpty(root.snipeVersion) ? "8.0" : root.snipeVersion;
+			string projectId = string.IsNullOrEmpty(root.projectStringID) ? root.projectID.ToString() : root.projectStringID;
+			string version = string.IsNullOrEmpty(root.snipeVersion) ? "8.0" : root.snipeVersion;
 
 			DateTime generatedAt;
 			if (!DateTime.TryParse(root.generatedAt, out generatedAt))

@@ -14,28 +14,15 @@ namespace MiniIT.Snipe.Unity.Editor
 		/// Downloads the API specs JSON for the current project.
 		/// </summary>
 		/// <returns>The specs JSON string, or null if download failed.</returns>
-		public static async Task<string> DownloadSpecsAsync()
+		public static async Task<string> DownloadSpecsAsync(int projectId, string authKey)
 		{
 			SnipeToolsConfig.Load();
 
-			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
-			{
-				Debug.LogError("SnipeApiSpecsDownloader.DownloadSpecsAsync - FAILED to get token (AuthKey is empty)");
-				return null;
-			}
-
-			if (SnipeToolsConfig.ProjectId <= 0)
-			{
-				Debug.LogError("SnipeApiSpecsDownloader.DownloadSpecsAsync - ProjectId is not configured");
-				return null;
-			}
-
 			using (var client = new HttpClient())
 			{
-				client.DefaultRequestHeaders.Authorization =
-					new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
+				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authKey);
 
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/meta";
+				string url = $"https://edit.snipe.dev/api/v1/project/{projectId}/code/meta";
 
 				Debug.Log($"SnipeApiSpecsDownloader.DownloadSpecsAsync - downloading specs from {url}");
 
