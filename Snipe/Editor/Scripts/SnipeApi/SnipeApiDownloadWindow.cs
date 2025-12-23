@@ -191,59 +191,66 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		private async Task DownloadSpecsAndGenerateSnipeApi()
 		{
-			Debug.Log("SnipeApiGenerateWindow.GenerateSnipeApi - start");
+			Debug.Log("DownloadSpecsAndGenerateSnipeApi - start");
 
 			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
 			{
-				Debug.LogError("SnipeApiGenerateWindow.GenerateSnipeApi - FAILED to get token");
+				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - FAILED to get token");
 				return;
 			}
 
 			if (SnipeToolsConfig.ProjectId <= 0)
 			{
-				Debug.LogError("SnipeApiSpecsDownloader.DownloadSpecsAsync - ProjectId is not configured");
+				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - ProjectId is not configured");
 				return;
 			}
-
-			// ensure directory exists
-			// if (!Directory.Exists(_directoryPath))
-			// {
-			// 	Directory.CreateDirectory(_directoryPath);
-			// }
 
 			// Download specs JSON
 			string specsJson = await SnipeApiSpecsDownloader.DownloadSpecsAsync(SnipeToolsConfig.ProjectId, SnipeToolsConfig.AuthKey);
 			if (string.IsNullOrEmpty(specsJson))
 			{
-				Debug.LogError("SnipeApiGenerateWindow.GenerateSnipeApi - failed to download specs");
+				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - failed to download specs");
 				return;
 			}
 
 			// Save raw specs JSON alongside generated code for debugging
-			// try
-			// {
-			// 	var specsPath = Path.Combine(_directoryPath, "SnipeApiSpecs.json");
-			// 	File.WriteAllText(specsPath, specsJson, System.Text.Encoding.UTF8);
-			// }
-			// catch (System.Exception e)
-			// {
-			// 	Debug.LogWarning($"SnipeApiGenerateWindow.GenerateSnipeApi - failed to save specs file: {e}");
-			// }
+
+			// ensure directory exists
+			string tempDir = "Temp";
+			if (!Directory.Exists(tempDir))
+			{
+				Directory.CreateDirectory(tempDir);
+			}
+			string specsPath = Path.Combine(tempDir, "SnipeApiSpecs.json");
+			if (File.Exists(specsPath))
+			{
+				File.Delete(specsPath);
+			}
+
+			try
+			{
+				Debug.Log($"DownloadSpecsAndGenerateSnipeApi - saving specs to: {specsPath}");
+				await File.WriteAllTextAsync(specsPath, specsJson, System.Text.Encoding.UTF8);
+			}
+			catch (System.Exception e)
+			{
+				Debug.LogWarning($"DownloadSpecsAndGenerateSnipeApi - failed to save specs file: {e}");
+			}
 
 			// Generate code from JSON
 			string generatedCode = SnipeApiGenerator.Generate(specsJson);
 			if (string.IsNullOrEmpty(generatedCode))
 			{
-				Debug.LogError("SnipeApiGenerateWindow.GenerateSnipeApi - failed to generate code");
+				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - failed to generate code");
 				return;
 			}
 
 			// Write generated code to file
 			string servicePath = Path.Combine(_directoryPath, SERVICE_FILE_NAME);
 			await File.WriteAllTextAsync(servicePath, generatedCode, System.Text.Encoding.UTF8);
-			Debug.Log($"SnipeApiGenerateWindow.GenerateSnipeApi - generated {SERVICE_FILE_NAME} at path: {servicePath}");
+			Debug.Log($"DownloadSpecsAndGenerateSnipeApi - generated {SERVICE_FILE_NAME} at path: {servicePath}");
 
-			Debug.Log("SnipeApiGenerateWindow.GenerateSnipeApi - done");
+			Debug.Log("DownloadSpecsAndGenerateSnipeApi - done");
 		}
 	}
 }
