@@ -858,7 +858,7 @@ namespace MiniIT.Snipe.Unity.Editor
 						Indent(sb, 2).AppendLine("[field:UnityEngine.SerializeField]");
 						Indent(sb, 2).AppendLine("#endif");
 
-						string csType = MapTableTypeToCs(field.type);
+						string csType = MapTypeToCs(field.type, null);
 						Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(field.id)
 							.AppendLine(" { get; set; }").AppendLine();
 					}
@@ -953,24 +953,6 @@ namespace MiniIT.Snipe.Unity.Editor
 						return $"Array of {displayElementType}";
 					}
 					return csType;
-			}
-		}
-
-		private static string MapTableTypeToCs(string type)
-		{
-			if (string.IsNullOrEmpty(type))
-				return "string";
-
-			switch (type)
-			{
-				case "int":
-					return "int";
-				case "float":
-					return "float";
-				case "boolean":
-					return "bool";
-				default:
-					return "string";
 			}
 		}
 
