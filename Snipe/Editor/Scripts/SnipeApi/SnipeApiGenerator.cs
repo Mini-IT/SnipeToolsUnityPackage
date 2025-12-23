@@ -1,98 +1,26 @@
 using System;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
 
 namespace MiniIT.Snipe.Unity.Editor
 {
 	/// <summary>
-	/// Downloads Snipe API specs JSON for the current project and generates a strongly-typed
-	/// <c>SnipeApiService.cs</c> bindings file that mirrors the server-side API.
+	/// Generates a strongly-typed <c>SnipeApiService.cs</c> bindings file from API specs JSON
+	/// that mirrors the server-side API.
 	/// </summary>
 	public static class SnipeApiGenerator
 	{
-		private const string SERVICE_FILE_NAME = "SnipeApiService.cs";
-		private const string SPECS_FILE_NAME = "SnipeApiSpecs.json";
-
-
-		#region HTTP entry point
-
 		/// <summary>
-		/// Downloads specs JSON from the Snipe server and generates C# bindings into the given directory.
+		/// Generates C# code from the provided specs JSON string.
 		/// </summary>
-		public static async Task GenerateAsync(string outputDirectory)
-		{
-			if (string.IsNullOrEmpty(outputDirectory))
-			{
-				Debug.LogError("SnipeApiGenerator.GenerateAsync - output directory is null or empty");
-				return;
-			}
-
-			SnipeToolsConfig.Load();
-
-			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
-			{
-				Debug.LogError("SnipeApiGenerator.GenerateAsync - FAILED to get token (AuthKey is empty)");
-				return;
-			}
-
-			if (SnipeToolsConfig.ProjectId <= 0)
-			{
-				Debug.LogError("SnipeApiGenerator.GenerateAsync - ProjectId is not configured");
-				return;
-			}
-
-			Directory.CreateDirectory(outputDirectory);
-
-			string specsJson;
-
-			using (var client = new HttpClient())
-			{
-				client.DefaultRequestHeaders.Authorization =
-					new AuthenticationHeaderValue("Bearer", SnipeToolsConfig.AuthKey);
-
-				string url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/meta";
-
-				Debug.Log($"SnipeApiGenerator.GenerateAsync - downloading specs from {url}");
-
-				var response = await client.GetAsync(url);
-
-				if (!response.IsSuccessStatusCode)
-				{
-					Debug.LogError(
-						$"SnipeApiGenerator.GenerateAsync - FAILED to download Specs; HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
-					return;
-				}
-
-				specsJson = await response.Content.ReadAsStringAsync();
-			}
-
-			// Save raw specs JSON alongside generated code for debugging.
-			try
-			{
-				var specsPath = Path.Combine(outputDirectory, SPECS_FILE_NAME);
-				File.WriteAllText(specsPath, specsJson, Encoding.UTF8);
-			}
-			catch (Exception e)
-			{
-				Debug.LogWarning($"SnipeApiGenerator.GenerateAsync - failed to save specs file: {e}");
-			}
-
-			await GenerateFromJsonAsync(outputDirectory, specsJson);
-		}
-
-		/// <summary>
-		/// Generates bindings from an already downloaded JSON document and writes them into the directory.
-		/// </summary>
-		public static Task GenerateFromJsonAsync(string outputDirectory, string specsJson)
+		/// <param name="specsJson">The API specs JSON string.</param>
+		/// <returns>The generated C# code as a string, or null if generation failed.</returns>
+		public static string Generate(string specsJson)
 		{
 			if (string.IsNullOrEmpty(specsJson))
 			{
-				Debug.LogError("SnipeApiGenerator.GenerateFromJsonAsync - specsJson is null or empty");
-				return Task.CompletedTask;
+				Debug.LogError("SnipeApiGenerator.Generate - specsJson is null or empty");
+				return null;
 			}
 
 			try
@@ -100,27 +28,20 @@ namespace MiniIT.Snipe.Unity.Editor
 				var root = ParseJson(specsJson);
 				if (root == null)
 				{
-					Debug.LogError("SnipeApiGenerator.GenerateFromJsonAsync - failed to parse specs JSON");
-					return Task.CompletedTask;
+					Debug.LogError("SnipeApiGenerator.Generate - failed to parse specs JSON");
+					return null;
 				}
 
 				string code = GenerateCode(root);
-
-				Directory.CreateDirectory(outputDirectory);
-				var servicePath = Path.Combine(outputDirectory, SERVICE_FILE_NAME);
-				File.WriteAllText(servicePath, code, Encoding.UTF8);
-
-				Debug.Log($"SnipeApiGenerator - generated {SERVICE_FILE_NAME} at path: {servicePath}");
+				Debug.Log($"SnipeApiGenerator.Generate - successfully generated code ({code.Length} characters)");
+				return code;
 			}
 			catch (Exception e)
 			{
-				Debug.LogError($"SnipeApiGenerator.GenerateFromJsonAsync - exception while generating: {e}");
+				Debug.LogError($"SnipeApiGenerator.Generate - exception while generating: {e}");
+				return null;
 			}
-
-			return Task.CompletedTask;
 		}
-
-		#endregion
 
 		#region Code generation
 
@@ -388,81 +309,8 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			sb.Append(");").AppendLine();
 
-			// XML doc with inputs, outputs, and error codes - standard XML doc format
-			Indent(sb, 2).AppendLine("/// <summary>");
-			Indent(sb, 2).Append("/// __").Append(method.messageType).Append("__").AppendLine();
-
-			// Description from doc - combine into paragraphs
-			if (method.doc != null && method.doc.Length > 0)
-			{
-				var descriptionBuilder = new StringBuilder();
-				foreach (var line in method.doc)
-				{
-					if (string.IsNullOrWhiteSpace(line))
-					{
-						if (descriptionBuilder.Length > 0)
-						{
-							Indent(sb, 2).Append("/// <para>").Append(EscapeXml(descriptionBuilder.ToString().Trim())).AppendLine("</para>");
-							descriptionBuilder.Clear();
-						}
-					}
-					else
-					{
-						if (descriptionBuilder.Length > 0)
-							descriptionBuilder.Append(" ");
-						descriptionBuilder.Append(line.Trim());
-					}
-				}
-				if (descriptionBuilder.Length > 0)
-				{
-					Indent(sb, 2).Append("/// <para>").Append(EscapeXml(descriptionBuilder.ToString().Trim())).AppendLine("</para>");
-				}
-			}
-
-			// Input section
-			if (method.inputs != null && method.inputs.Length > 0)
-			{
-				Indent(sb, 2).Append("/// Input:<ul>").AppendLine();
-				foreach (var field in method.inputs)
-				{
-					string optional = field.optional ? " (optional)" : "";
-					string csType = MapTypeToCs(field.type, field.itemType);
-					string typeName = GetTypeDisplayName(csType);
-					string desc = !string.IsNullOrEmpty(field.description) ? ". " + field.description : "";
-					Indent(sb, 2).Append("/// <li>`").Append(field.name).Append("`").Append(optional)
-						.Append(" - `").Append(typeName).Append("`").Append(desc).AppendLine("</li>");
-				}
-				Indent(sb, 2).AppendLine("/// </ul><br/>");
-			}
-
-			// Output section
-			if (method.outputs != null && method.outputs.Length > 0)
-			{
-				Indent(sb, 2).Append("/// Output:<ul>").AppendLine();
-				foreach (var field in method.outputs)
-				{
-					string csType = MapTypeToCs(field.type, field.itemType);
-					string typeName = GetTypeDisplayName(csType);
-					string desc = !string.IsNullOrEmpty(field.description) ? ". " + field.description : "";
-					Indent(sb, 2).Append("/// <li>`").Append(field.name).Append("` - `").Append(typeName)
-						.Append("`").Append(desc).AppendLine("</li>");
-				}
-				Indent(sb, 2).AppendLine("/// </ul><br/>");
-			}
-
-			// Error codes section
-			if (method.errorCodes != null && method.errorCodes.Length > 0)
-			{
-				Indent(sb, 2).Append("/// Error codes:<ul>").AppendLine();
-				foreach (var errorCode in method.errorCodes)
-				{
-					if (string.IsNullOrWhiteSpace(errorCode))
-						continue;
-					Indent(sb, 2).Append("/// <li>").Append(EscapeXml(errorCode)).AppendLine("</li>");
-				}
-				Indent(sb, 2).AppendLine("/// </ul><br/>");
-			}
-			Indent(sb, 2).AppendLine("/// </summary>");
+			// XML doc with inputs, outputs, and error codes
+			EmitMethodSummary(sb, method);
 
 			// Method signature
 			Indent(sb, 2).Append("public bool ").Append(methodName).Append("(");
@@ -566,6 +414,87 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 3).AppendLine("return true;");
 			Indent(sb, 2).AppendLine("}");
 			sb.AppendLine();
+		}
+
+		/// <summary>
+		/// XML doc with inputs, outputs, and error codes - standard XML doc format
+		/// </summary>
+		private static void EmitMethodSummary(StringBuilder sb, MetagenMethod method)
+		{
+			Indent(sb, 2).AppendLine("/// <summary>");
+			Indent(sb, 2).Append("/// __").Append(method.messageType).Append("__").AppendLine();
+
+			// Description from doc - combine into paragraphs
+			if (method.doc != null && method.doc.Length > 0)
+			{
+				var descriptionBuilder = new StringBuilder();
+				foreach (var line in method.doc)
+				{
+					if (string.IsNullOrWhiteSpace(line))
+					{
+						if (descriptionBuilder.Length > 0)
+						{
+							Indent(sb, 2).Append("/// <para>").Append(EscapeXml(descriptionBuilder.ToString().Trim())).AppendLine("</para>");
+							descriptionBuilder.Clear();
+						}
+					}
+					else
+					{
+						if (descriptionBuilder.Length > 0)
+							descriptionBuilder.Append(" ");
+						descriptionBuilder.Append(line.Trim());
+					}
+				}
+				if (descriptionBuilder.Length > 0)
+				{
+					Indent(sb, 2).Append("/// <para>").Append(EscapeXml(descriptionBuilder.ToString().Trim())).AppendLine("</para>");
+				}
+			}
+
+			// Input section
+			if (method.inputs != null && method.inputs.Length > 0)
+			{
+				Indent(sb, 2).Append("/// Input:<ul>").AppendLine();
+				foreach (var field in method.inputs)
+				{
+					string optional = field.optional ? " (optional)" : "";
+					string csType = MapTypeToCs(field.type, field.itemType);
+					string typeName = GetTypeDisplayName(csType);
+					string desc = !string.IsNullOrEmpty(field.description) ? ". " + field.description : "";
+					Indent(sb, 2).Append("/// <li>`").Append(field.name).Append("`").Append(optional)
+						.Append(" - `").Append(typeName).Append("`").Append(desc).AppendLine("</li>");
+				}
+				Indent(sb, 2).AppendLine("/// </ul><br/>");
+			}
+
+			// Output section
+			if (method.outputs != null && method.outputs.Length > 0)
+			{
+				Indent(sb, 2).Append("/// Output:<ul>").AppendLine();
+				foreach (var field in method.outputs)
+				{
+					string csType = MapTypeToCs(field.type, field.itemType);
+					string typeName = GetTypeDisplayName(csType);
+					string desc = !string.IsNullOrEmpty(field.description) ? ". " + field.description : "";
+					Indent(sb, 2).Append("/// <li>`").Append(field.name).Append("` - `").Append(typeName)
+						.Append("`").Append(desc).AppendLine("</li>");
+				}
+				Indent(sb, 2).AppendLine("/// </ul><br/>");
+			}
+
+			// Error codes section
+			if (method.errorCodes != null && method.errorCodes.Length > 0)
+			{
+				Indent(sb, 2).Append("/// Error codes:<ul>").AppendLine();
+				foreach (var errorCode in method.errorCodes)
+				{
+					if (string.IsNullOrWhiteSpace(errorCode))
+						continue;
+					Indent(sb, 2).Append("/// <li>").Append(EscapeXml(errorCode)).AppendLine("</li>");
+				}
+				Indent(sb, 2).AppendLine("/// </ul><br/>");
+			}
+			Indent(sb, 2).AppendLine("/// </summary>");
 		}
 
 		private static void GenerateOutputFieldExtraction(StringBuilder sb, MetagenField field, int indent)
