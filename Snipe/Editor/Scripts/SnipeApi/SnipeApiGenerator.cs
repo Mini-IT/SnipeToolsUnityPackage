@@ -287,27 +287,33 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			// Delegate
 			Indent(sb, 2).Append("public delegate void ").Append(callbackName).Append("(");
-			sb.Append("string errorCode");
 
-			if (method.outputs != null)
+			if (method.outputs == null || method.outputs.Length == 0)
 			{
+				sb.Append("string errorCode");
+			}
+			else
+			{
+				bool first = true;
 				foreach (var field in method.outputs)
 				{
 					// Skip errorCode in outputs since it's always the first parameter
-					if (field.name == "errorCode")
-						continue;
+					// if (field.name == "errorCode")
+					// 	continue;
+
+					if (!first)
+					{
+						sb.Append(",").AppendLine();
+						Indent(sb, 3);
+					}
+					first = false;
 
 					string csType = MapTypeToCs(field.type, field.itemType);
-					Indent(sb, 0).Append(",").AppendLine();
-					// For GetAll, use field name directly (data), otherwise prefix with o_
-					string paramName = (method.messageType == "attr.getAll" && field.name == "data")
-						? field.name
-						: "o_" + field.name;
-					Indent(sb, 3).Append(csType).Append(' ').Append(paramName);
+					sb.Append(csType).Append(' ').Append(field.name);
 				}
 			}
 
-			sb.Append(");").AppendLine();
+			sb.AppendLine(");").AppendLine();
 
 			// XML doc with inputs, outputs, and error codes
 			EmitMethodSummary(sb, method);
@@ -341,25 +347,31 @@ namespace MiniIT.Snipe.Unity.Editor
 			sb.AppendLine();
 			Indent(sb, 2).AppendLine("{");
 
-			// request_data dictionary
-			Indent(sb, 3).AppendLine("Dictionary<string, object> request_data = new Dictionary<string, object>()");
-			Indent(sb, 3).AppendLine("{");
+			bool hasInputs = method.inputs != null && method.inputs.Length > 0;
 
-			if (method.inputs != null)
+			if (hasInputs)
 			{
+				// requestData dictionary
+				Indent(sb, 3).AppendLine("var requestData = new Dictionary<string, object>()");
+				Indent(sb, 3).AppendLine("{");
+
 				for (int i = 0; i < method.inputs.Length; i++)
 				{
 					var field = method.inputs[i];
 					Indent(sb, 4).Append("[\"").Append(field.name).Append("\"] = ").Append(field.name);
 					sb.Append(i < method.inputs.Length - 1 ? "," : string.Empty).AppendLine();
 				}
+
+				Indent(sb, 3).AppendLine("};");
 			}
 
-			Indent(sb, 3).AppendLine("};");
-
 			// CreateRequest
-			Indent(sb, 3).Append("var request = CreateRequest(\"").Append(method.messageType).Append("\", request_data);").AppendLine();
-			sb.AppendLine();
+			Indent(sb, 3).Append("var request = CreateRequest(\"").Append(method.messageType).Append("\"");
+			if (hasInputs)
+			{
+				sb.Append(", requestData");
+			}
+			sb.AppendLine(");").AppendLine();
 			Indent(sb, 3).AppendLine("if (request == null)");
 			Indent(sb, 4).AppendLine("return false;");
 			sb.AppendLine();
@@ -368,16 +380,16 @@ namespace MiniIT.Snipe.Unity.Editor
 			bool isUserAttrGetAll = method.messageType == "attr.getAll";
 			if (isUserAttrGetAll)
 			{
-				Indent(sb, 3).AppendLine("request.Request(async (error_code, response_data) =>");
+				Indent(sb, 3).AppendLine("request.Request(async (errorCode, responseData) =>");
 				Indent(sb, 3).AppendLine("{");
 				Indent(sb, 4).AppendLine("this.Initialized = true;");
 				Indent(sb, 4).AppendLine("await AlterTask.Yield();");
-				Indent(sb, 4).Append("callback?.Invoke(error_code,").AppendLine();
+				Indent(sb, 4).Append("callback?.Invoke(errorCode,").AppendLine();
 				Indent(sb, 5).AppendLine("this.UserAttributes);");
 			}
 			else
 			{
-				Indent(sb, 3).AppendLine("request.Request((error_code, response_data) =>");
+				Indent(sb, 3).AppendLine("request.Request((errorCode, responseData) =>");
 				Indent(sb, 3).AppendLine("{");
 
 				if (method.outputs != null && method.outputs.Length > 0)
@@ -390,7 +402,7 @@ namespace MiniIT.Snipe.Unity.Editor
 						GenerateOutputFieldExtraction(sb, field, 4);
 					}
 
-					Indent(sb, 4).Append("callback?.Invoke(error_code");
+					Indent(sb, 4).Append("callback?.Invoke(errorCode");
 					foreach (var field in method.outputs)
 					{
 						// Skip errorCode in outputs since it's always the first parameter
@@ -399,14 +411,14 @@ namespace MiniIT.Snipe.Unity.Editor
 
 						string paramName = (method.messageType == "attr.getAll" && field.name == "data")
 							? "this.UserAttributes"
-							: "o_" + field.name;
+							: field.name;
 						sb.Append(", ").Append(paramName);
 					}
 					sb.Append(");").AppendLine();
 				}
 				else
 				{
-					Indent(sb, 4).AppendLine("callback?.Invoke(error_code);");
+					Indent(sb, 4).AppendLine("callback?.Invoke(errorCode);");
 				}
 			}
 
@@ -500,25 +512,25 @@ namespace MiniIT.Snipe.Unity.Editor
 		private static void GenerateOutputFieldExtraction(StringBuilder sb, MetagenField field, int indent)
 		{
 			string csType = MapTypeToCs(field.type, field.itemType);
-			string varName = "o_" + field.name;
+			string varName = field.name;
 
 			if (field.type == "string")
 			{
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
-					.Append(" = response_data.SafeGetString(\"").Append(field.name).Append("\");").AppendLine();
+					.Append(" = responseData.SafeGetString(\"").Append(field.name).Append("\");").AppendLine();
 			}
 			else if (field.type == "int" || field.type == "float" || field.type == "boolean")
 			{
 				string genericType = csType == "bool" ? "bool" : csType;
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
-					.Append(" = response_data.SafeGetValue<").Append(genericType).Append(">(\"")
+					.Append(" = responseData.SafeGetValue<").Append(genericType).Append(">(\"")
 					.Append(field.name).Append("\");").AppendLine();
 			}
 			else if (field.type == "array")
 			{
 				Indent(sb, indent).Append("var ").Append(varName).Append(" = new ").Append(csType).Append("();")
 					.AppendLine();
-				Indent(sb, indent).Append("if (response_data[\"").Append(field.name)
+				Indent(sb, indent).Append("if (responseData[\"").Append(field.name)
 					.Append("\"] is IList src_").Append(field.name).Append(')').AppendLine();
 				Indent(sb, indent).AppendLine("{");
 
@@ -534,7 +546,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				// custom type / json object – try dictionary-based
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
 					.Append(" = new ").Append(csType)
-					.Append("(response_data[\"").Append(field.name).Append("\"] as Dictionary<string, object>);")
+					.Append("(responseData[\"").Append(field.name).Append("\"] as Dictionary<string, object>);")
 					.AppendLine();
 			}
 		}
@@ -556,16 +568,22 @@ namespace MiniIT.Snipe.Unity.Editor
 			string handlerName = response.callName + "Handler";
 			string eventName = "On" + response.callName;
 
-			Indent(sb, 2).Append("public delegate void ").Append(handlerName).Append("(");
-			sb.Append("string errorCode");
+			Indent(sb, 2).Append("public delegate void ").Append(handlerName).AppendLine("(");
+			//sb.Append("string errorCode");
 
 			if (response.fields != null)
 			{
+				bool first = true;
 				foreach (var field in response.fields)
 				{
+					if (!first)
+					{
+						Indent(sb, 0).Append(",").AppendLine();
+					}
+					first = false;
+
 					string csType = MapTypeToCs(field.type, field.itemType);
-					Indent(sb, 0).Append(",").AppendLine();
-					Indent(sb, 3).Append(csType).Append(' ').Append("o_").Append(field.name);
+					Indent(sb, 3).Append(csType).Append(' ').Append(field.name);
 				}
 			}
 
@@ -576,7 +594,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		private static void GenerateOnMessageReceived(StringBuilder sb, MetagenModule module)
 		{
-			Indent(sb, 2).AppendLine("private void OnMessageReceived(string message_type, string error_code, IDictionary<string, object> response_data, int request_id)");
+			Indent(sb, 2).AppendLine("private void OnMessageReceived(string messageType, string errorCode, IDictionary<string, object> responseData, int requestId)");
 			Indent(sb, 2).AppendLine("{");
 
 			bool first = true;
@@ -587,7 +605,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				string eventName = "On" + response.callName;
 
-				Indent(sb, 3).Append(first ? "if" : "else if").Append(" (message_type == \"")
+				Indent(sb, 3).Append(first ? "if" : "else if").Append(" (messageType == \"")
 					.Append(response.msgType).Append("\")").AppendLine();
 				Indent(sb, 3).AppendLine("{");
 
@@ -595,19 +613,30 @@ namespace MiniIT.Snipe.Unity.Editor
 				{
 					foreach (var field in response.fields)
 					{
+						// Skip errorCode since we already have it as a parameter
+						if (field.name == "errorCode")
+							continue;
+
 						GenerateOutputFieldExtraction(sb, field, 4);
 					}
 
-					Indent(sb, 4).Append(eventName).Append("?.Invoke(error_code");
+					Indent(sb, 4).Append(eventName).Append("?.Invoke(");
+					bool firstParam = true;
 					foreach (var field in response.fields)
 					{
-						sb.Append(", ").Append("o_").Append(field.name);
+						if (!firstParam)
+						{
+							sb.Append(", ");
+						}
+						firstParam = false;
+
+						sb.Append(field.name);
 					}
 					sb.Append(");").AppendLine();
 				}
 				else
 				{
-					Indent(sb, 4).Append(eventName).AppendLine("?.Invoke(error_code);");
+					Indent(sb, 4).Append(eventName).AppendLine("?.Invoke(errorCode);");
 				}
 
 				Indent(sb, 3).AppendLine("}");
@@ -674,16 +703,16 @@ namespace MiniIT.Snipe.Unity.Editor
 							string listType = csType;
 							string itemType = GetArrayItemType(listType);
 
-							Indent(sb, 3).Append("var o_").Append(field.name).Append(" = new ").Append(listType)
+							Indent(sb, 3).Append("var ").Append(field.name).Append(" = new ").Append(listType)
 								.Append("();").AppendLine();
 							Indent(sb, 3).Append("if (data[\"").Append(field.name)
 								.Append("\"] is IList src_").Append(field.name).Append(')').AppendLine();
 							Indent(sb, 3).AppendLine("{");
 							Indent(sb, 4).Append("foreach (").Append(itemType).Append(" o in src_").Append(field.name)
 								.Append(')').AppendLine();
-							Indent(sb, 5).Append("o_").Append(field.name).Append(".Add(o);").AppendLine();
+							Indent(sb, 5).Append(field.name).Append(".Add(o);").AppendLine();
 							Indent(sb, 3).AppendLine("}");
-							Indent(sb, 3).Append("this.").Append(field.name).Append(" = o_").Append(field.name)
+							Indent(sb, 3).Append("this.").Append(field.name).Append(" = ").Append(field.name)
 								.Append(";").AppendLine();
 						}
 						else
