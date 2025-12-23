@@ -212,7 +212,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				string moduleClass = "SnipeApiModule" + module.name;
 				bool isUserAttr = module.name == "UserAttr";
 
-				Indent(sb, 1).Append("public sealed class ").Append(moduleClass).Append(" : SnipeApiModule").AppendLine();
+				Indent(sb, 1).Append("public sealed class ").Append(moduleClass).AppendLine(" : SnipeApiModule");
 				Indent(sb, 1).AppendLine("{");
 
 				// Special properties for UserAttr module
@@ -223,7 +223,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					sb.AppendLine();
 				}
 
-				Indent(sb, 2).Append("internal ").Append(moduleClass).Append("(SnipeApiService snipeApiService) : base(snipeApiService)").AppendLine();
+				Indent(sb, 2).Append("internal ").Append(moduleClass).AppendLine("(SnipeApiService snipeApiService) : base(snipeApiService)");
 				Indent(sb, 2).AppendLine("{");
 
 				// Special initialization for UserAttr module
@@ -303,7 +303,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 					if (!first)
 					{
-						sb.Append(",").AppendLine();
+						sb.AppendLine(",");
 						Indent(sb, 3);
 					}
 					first = false;
@@ -343,8 +343,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				sb.Append(", ");
 			}
 
-			sb.Append(callbackName).Append(" callback = null)");
-			sb.AppendLine();
+			sb.Append(callbackName).AppendLine(" callback = null)");
 			Indent(sb, 2).AppendLine("{");
 
 			bool hasInputs = method.inputs != null && method.inputs.Length > 0;
@@ -358,8 +357,8 @@ namespace MiniIT.Snipe.Unity.Editor
 				for (int i = 0; i < method.inputs.Length; i++)
 				{
 					var field = method.inputs[i];
-					Indent(sb, 4).Append("[\"").Append(field.name).Append("\"] = ").Append(field.name);
-					sb.Append(i < method.inputs.Length - 1 ? "," : string.Empty).AppendLine();
+					Indent(sb, 4).Append("[\"").Append(field.name).Append("\"] = ").Append(field.name)
+						.AppendLine(i < method.inputs.Length - 1 ? "," : string.Empty);
 				}
 
 				Indent(sb, 3).AppendLine("};");
@@ -414,7 +413,7 @@ namespace MiniIT.Snipe.Unity.Editor
 							: field.name;
 						sb.Append(", ").Append(paramName);
 					}
-					sb.Append(");").AppendLine();
+					sb.AppendLine(");");
 				}
 				else
 				{
@@ -434,7 +433,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		private static void EmitMethodSummary(StringBuilder sb, MetagenMethod method)
 		{
 			Indent(sb, 2).AppendLine("/// <summary>");
-			Indent(sb, 2).Append("/// __").Append(method.messageType).Append("__").AppendLine();
+			Indent(sb, 2).Append("/// __").Append(method.messageType).AppendLine("__");
 
 			// Description from doc - combine into paragraphs
 			if (method.doc != null && method.doc.Length > 0)
@@ -466,7 +465,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			// Input section
 			if (method.inputs != null && method.inputs.Length > 0)
 			{
-				Indent(sb, 2).Append("/// Input:<ul>").AppendLine();
+				Indent(sb, 2).AppendLine("/// Input:<ul>");
 				foreach (var field in method.inputs)
 				{
 					string optional = field.optional ? " (optional)" : "";
@@ -482,7 +481,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			// Output section
 			if (method.outputs != null && method.outputs.Length > 0)
 			{
-				Indent(sb, 2).Append("/// Output:<ul>").AppendLine();
+				Indent(sb, 2).AppendLine("/// Output:<ul>");
 				foreach (var field in method.outputs)
 				{
 					string csType = MapTypeToCs(field.type, field.itemType);
@@ -497,7 +496,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			// Error codes section
 			if (method.errorCodes != null && method.errorCodes.Length > 0)
 			{
-				Indent(sb, 2).Append("/// Error codes:<ul>").AppendLine();
+				Indent(sb, 2).AppendLine("/// Error codes:<ul>");
 				foreach (var errorCode in method.errorCodes)
 				{
 					if (string.IsNullOrWhiteSpace(errorCode))
@@ -517,19 +516,18 @@ namespace MiniIT.Snipe.Unity.Editor
 			if (field.type == "string")
 			{
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
-					.Append(" = responseData.SafeGetString(\"").Append(field.name).Append("\");").AppendLine();
+					.Append(" = responseData.SafeGetString(\"").Append(field.name).AppendLine("\");");
 			}
 			else if (field.type == "int" || field.type == "float" || field.type == "boolean")
 			{
 				string genericType = csType == "bool" ? "bool" : csType;
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
 					.Append(" = responseData.SafeGetValue<").Append(genericType).Append(">(\"")
-					.Append(field.name).Append("\");").AppendLine();
+					.Append(field.name).AppendLine("\");");
 			}
 			else if (field.type == "array")
 			{
-				Indent(sb, indent).Append("var ").Append(varName).Append(" = new ").Append(csType).Append("();")
-					.AppendLine();
+				Indent(sb, indent).Append("var ").Append(varName).Append(" = new ").Append(csType).AppendLine("();");
 				Indent(sb, indent).Append("if (responseData[\"").Append(field.name)
 					.Append("\"] is IList src_").Append(field.name).Append(')').AppendLine();
 				Indent(sb, indent).AppendLine("{");
@@ -537,7 +535,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				// assume arrays of simple dictionaries / scalars; keep generic
 				Indent(sb, indent + 1).Append("foreach (var o in src_").Append(field.name).Append(')').AppendLine();
 				Indent(sb, indent + 2).Append(varName).Append(".Add((").Append(GetArrayItemType(csType))
-					.Append(")o);").AppendLine();
+					.AppendLine(")o);");
 
 				Indent(sb, indent).AppendLine("}");
 			}
@@ -578,7 +576,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				{
 					if (!first)
 					{
-						Indent(sb, 0).Append(",").AppendLine();
+						Indent(sb, 0).AppendLine(",");
 					}
 					first = false;
 
@@ -587,9 +585,9 @@ namespace MiniIT.Snipe.Unity.Editor
 				}
 			}
 
-			sb.Append(");").AppendLine();
-			Indent(sb, 2).Append("public event ").Append(handlerName).Append(' ').Append(eventName).AppendLine(";");
-			sb.AppendLine();
+			sb.AppendLine(");");
+			Indent(sb, 2).Append("public event ").Append(handlerName).Append(' ').Append(eventName).AppendLine(";")
+				.AppendLine();
 		}
 
 		private static void GenerateOnMessageReceived(StringBuilder sb, MetagenModule module)
@@ -606,7 +604,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				string eventName = "On" + response.callName;
 
 				Indent(sb, 3).Append(first ? "if" : "else if").Append(" (messageType == \"")
-					.Append(response.msgType).Append("\")").AppendLine();
+					.Append(response.msgType).AppendLine("\")");
 				Indent(sb, 3).AppendLine("{");
 
 				if (response.fields != null && response.fields.Length > 0)
@@ -632,7 +630,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 						sb.Append(field.name);
 					}
-					sb.Append(");").AppendLine();
+					sb.AppendLine(");");
 				}
 				else
 				{
@@ -659,7 +657,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					continue;
 
 				Indent(sb, 1).AppendLine("[System.Serializable]");
-				Indent(sb, 1).Append("public sealed class ").Append(type.name).Append(" : IMapConvertible").AppendLine();
+				Indent(sb, 1).Append("public sealed class ").Append(type.name).AppendLine(" : IMapConvertible");
 				Indent(sb, 1).AppendLine("{");
 
 				// fields
@@ -668,16 +666,15 @@ namespace MiniIT.Snipe.Unity.Editor
 					foreach (var field in type.fields)
 					{
 						string csType = MapTypeToCs(field.type, field.itemType);
-						Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(field.name).Append(";")
-							.AppendLine();
+						Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(field.name).AppendLine(";");
 					}
 				}
 
 				// default ctor
-				Indent(sb, 2).Append("public ").Append(type.name).Append("() {}").AppendLine();
+				Indent(sb, 2).Append("public ").Append(type.name).AppendLine("() {}");
 
 				// ctor from map
-				Indent(sb, 2).Append("public ").Append(type.name).Append("(IDictionary<string, object> data = null)").AppendLine();
+				Indent(sb, 2).Append("public ").Append(type.name).AppendLine("(IDictionary<string, object> data = null)");
 				Indent(sb, 2).AppendLine("{");
 				Indent(sb, 3).AppendLine("if (data == null) return;");
 
@@ -690,13 +687,13 @@ namespace MiniIT.Snipe.Unity.Editor
 						if (field.type == "string")
 						{
 							Indent(sb, 3).Append("this.").Append(field.name).Append(" = data.SafeGetString(\"")
-								.Append(field.name).Append("\");").AppendLine();
+								.Append(field.name).AppendLine("\");");
 						}
 						else if (field.type == "int" || field.type == "float" || field.type == "boolean")
 						{
 							string genericType = csType == "bool" ? "bool" : csType;
 							Indent(sb, 3).Append("this.").Append(field.name).Append(" = data.SafeGetValue<")
-								.Append(genericType).Append(">(\"").Append(field.name).Append("\");").AppendLine();
+								.Append(genericType).Append(">(\"").Append(field.name).AppendLine("\");");
 						}
 						else if (field.type == "array")
 						{
@@ -704,16 +701,16 @@ namespace MiniIT.Snipe.Unity.Editor
 							string itemType = GetArrayItemType(listType);
 
 							Indent(sb, 3).Append("var ").Append(field.name).Append(" = new ").Append(listType)
-								.Append("();").AppendLine();
+								.AppendLine("();");
 							Indent(sb, 3).Append("if (data[\"").Append(field.name)
 								.Append("\"] is IList src_").Append(field.name).Append(')').AppendLine();
 							Indent(sb, 3).AppendLine("{");
 							Indent(sb, 4).Append("foreach (").Append(itemType).Append(" o in src_").Append(field.name)
 								.Append(')').AppendLine();
-							Indent(sb, 5).Append(field.name).Append(".Add(o);").AppendLine();
+							Indent(sb, 5).Append(field.name).AppendLine(".Add(o);");
 							Indent(sb, 3).AppendLine("}");
 							Indent(sb, 3).Append("this.").Append(field.name).Append(" = ").Append(field.name)
-								.Append(";").AppendLine();
+								.AppendLine(";");
 						}
 						else
 						{
@@ -729,9 +726,9 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				// implicit operator
 				Indent(sb, 2).Append("public static implicit operator ").Append(type.name)
-					.Append("(Dictionary<string, object> data)").AppendLine();
+					.AppendLine("(Dictionary<string, object> data)");
 				Indent(sb, 2).AppendLine("{");
-				Indent(sb, 3).Append("return new ").Append(type.name).Append("(data);").AppendLine();
+				Indent(sb, 3).Append("return new ").Append(type.name).AppendLine("(data);");
 				Indent(sb, 2).AppendLine("}");
 				sb.AppendLine();
 
@@ -747,7 +744,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					{
 						var field = type.fields[i];
 						Indent(sb, 4).Append("[\"").Append(field.name).Append("\"] = this.").Append(field.name);
-						sb.Append(i < type.fields.Length - 1 ? "," : string.Empty).AppendLine();
+						sb.AppendLine(i < type.fields.Length - 1 ? "," : string.Empty);
 					}
 				}
 
@@ -815,7 +812,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				string itemClassName = "SnipeTable" + table.stringID + "Item";
 				Indent(sb, 2).Append("public SnipeTable<").Append(itemClassName).Append("> ").Append(table.stringID)
-					.Append(" { get; }").AppendLine();
+					.AppendLine(" { get; }");
 			}
 
 			sb.AppendLine();
@@ -829,7 +826,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				string itemClassName = "SnipeTable" + table.stringID + "Item";
 				Indent(sb, 3).Append(table.stringID).Append(" = RegisterTable(new SnipeTable<")
-					.Append(itemClassName).Append(">(), \"").Append(table.stringID).Append("\");").AppendLine();
+					.Append(itemClassName).Append(">(), \"").Append(table.stringID).AppendLine("\");");
 			}
 
 			Indent(sb, 2).AppendLine("}");
@@ -845,8 +842,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				string itemClassName = "SnipeTable" + table.stringID + "Item";
 
 				Indent(sb, 1).AppendLine("[System.Serializable]");
-				Indent(sb, 1).Append("public sealed class ").Append(itemClassName).Append(" : SnipeTableItem")
-					.AppendLine();
+				Indent(sb, 1).Append("public sealed class ").Append(itemClassName).AppendLine(" : SnipeTableItem");
 				Indent(sb, 1).AppendLine("{");
 
 				if (table.fields != null)
@@ -864,7 +860,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 						string csType = MapTableTypeToCs(field.type);
 						Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(field.id)
-							.Append(" { get; set; }").AppendLine();
+							.AppendLine(" { get; set; }").AppendLine();
 					}
 				}
 
@@ -906,7 +902,10 @@ namespace MiniIT.Snipe.Unity.Editor
 				case "string":
 					return "string";
 				case "int":
+				case "timestamp":
 					return "int";
+				case "arrayint":
+					return "List<int>";
 				case "float":
 					return "float";
 				case "boolean":
