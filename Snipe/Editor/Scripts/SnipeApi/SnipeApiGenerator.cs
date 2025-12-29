@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Debug = UnityEngine.Debug;
 
@@ -191,7 +192,29 @@ namespace MiniIT.Snipe.Unity.Editor
 					if (string.IsNullOrEmpty(mr.messageType))
 						continue;
 
-					Indent(sb, 3).Append("AddMergeableRequestType(\"").Append(mr.messageType).AppendLine("\");");
+					if (mr.payload != null && mr.payload.Count > 0)
+					{
+						Indent(sb, 3).Append("AddMergeableRequestType(new SnipeRequestDescriptor() { MessageType = \"")
+							.Append(mr.messageType).Append("\", Data = new Dictionary<string, object>() { ");
+
+						bool first = true;
+						foreach (KeyValuePair<string, string> pair in mr.payload)
+						{
+							if (!first)
+							{
+								sb.Append(", ");
+							}
+							first = false;
+
+							sb.Append("[\"").Append(pair.Key).Append("\"] = \"").Append(pair.Value).Append('\"');
+						}
+
+						sb.AppendLine(" } });");
+					}
+					else
+					{
+						Indent(sb, 3).Append("AddMergeableRequestType(\"").Append(mr.messageType).AppendLine("\");");
+					}
 				}
 			}
 
@@ -272,18 +295,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			if (method == null || string.IsNullOrEmpty(method.callName) || string.IsNullOrEmpty(method.messageType))
 				return;
 
-			// Extract method name from messageType: "attr.getAll" -> "GetAll", "attr.getMulti" -> "GetMulti"
-			// Split by '.' and take the right part, then capitalize first letter
-			string methodName = method.messageType;
-			int dotIndex = methodName.IndexOf('.');
-			if (dotIndex >= 0 && dotIndex < methodName.Length - 1)
-			{
-				methodName = methodName.Substring(dotIndex + 1);
-				if (methodName.Length > 0)
-				{
-					methodName = char.ToUpperInvariant(methodName[0]) + methodName.Substring(1);
-				}
-			}
+			string methodName = ExtractMethodName(method);
 			string callbackName = methodName + "Callback";
 
 			// Delegate
@@ -426,6 +438,35 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 3).AppendLine("return true;");
 			Indent(sb, 2).AppendLine("}");
 			sb.AppendLine();
+		}
+
+		private static string ExtractMethodName(MetagenMethod method)
+		{
+			if (!string.IsNullOrEmpty(method.actionID))
+			{
+				// Extract method name from actionID: "car.insertMaterial" -> "CarInsertMaterial", "debug.resetUser" -> "DebugResetUser"
+				string[] parts = method.actionID.Split('.');
+				string actionName = "";
+				foreach (string part in parts)
+				{
+					actionName += char.ToUpperInvariant(part[0]) + part.Substring(1);
+				}
+				return actionName;
+			}
+
+			// Extract method name from messageType: "attr.getAll" -> "GetAll", "attr.getMulti" -> "GetMulti"
+			// Split by '.' and take the right part, then capitalize first letter
+			string methodName = method.messageType;
+			int dotIndex = methodName.IndexOf('.');
+			if (dotIndex >= 0 && dotIndex < methodName.Length - 1)
+			{
+				methodName = methodName.Substring(dotIndex + 1);
+				if (methodName.Length > 0)
+				{
+					methodName = char.ToUpperInvariant(methodName[0]) + methodName.Substring(1);
+				}
+			}
+			return methodName;
 		}
 
 		/// <summary>
@@ -859,7 +900,9 @@ namespace MiniIT.Snipe.Unity.Editor
 					{
 						if (!string.IsNullOrEmpty(field.name))
 						{
-							Indent(sb, 2).Append("/// <summary>").Append(field.name).AppendLine("</summary>");
+							Indent(sb, 2).AppendLine("/// <summary>");
+							Indent(sb, 2).Append("/// ").AppendLine(field.name);
+							Indent(sb, 2).AppendLine("/// </summary>");
 						}
 
 						Indent(sb, 2).AppendLine("#if UNITY_EDITOR");
@@ -918,16 +961,16 @@ namespace MiniIT.Snipe.Unity.Editor
 					return "float";
 				case "boolean":
 					return "bool";
-				case "Dynamic":
-				case "object":
-					return "object";
 				case "array":
 					{
 						string elementType = MapTypeToCs(itemType, null);
 						return $"List<{elementType}>";
 					}
+				case "Dynamic":
+				case "object":
+				case "json":
 				default:
-					return type;
+					return "object";
 			}
 		}
 
@@ -1016,6 +1059,8 @@ namespace MiniIT.Snipe.Unity.Editor
 			public MetagenField[] inputs;
 			public MetagenField[] outputs;
 			public string[] errorCodes;
+			public string actionID;
+			public bool mergeable;
 		}
 
 		private sealed class MetagenResponse
@@ -1059,6 +1104,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		private sealed class MetagenMergeableRequest
 		{
 			public string messageType;
+			public Dictionary<string, string> payload;
 		}
 
 		private sealed class MetagenUserAttribute
