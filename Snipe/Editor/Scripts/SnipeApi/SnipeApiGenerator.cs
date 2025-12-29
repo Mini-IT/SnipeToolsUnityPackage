@@ -690,7 +690,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			Indent(sb, 2).AppendLine("}");
-			sb.AppendLine();
 		}
 
 		private static void GenerateTypes(StringBuilder sb, MetagenRoot root)
@@ -839,7 +838,6 @@ namespace MiniIT.Snipe.Unity.Editor
 					.Append("(snipeApiService, \"").Append(attr.stringID).AppendLine("\"));");
 			}
 
-			Indent(sb, 2).AppendLine();
 			Indent(sb, 2).AppendLine("}");
 			Indent(sb, 1).AppendLine("}");
 			sb.AppendLine();
