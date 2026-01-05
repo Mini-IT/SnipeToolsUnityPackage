@@ -85,6 +85,9 @@ namespace MiniIT.Snipe.Unity.Editor
 			_authKeyWidget = root.Q<AuthKeyWidget>("auth-key-widget");
 
 			_versionLabel.text = "Snipe API Service Version: " + SNIPE_VERSION_SUFFIX;
+#if SNIPE_8_0_OR_NEWER
+			_versionLabel.text += " (local source generator)";
+#endif
 
 			_directoryField.value = string.IsNullOrEmpty(_directoryPath) ? Application.dataPath : _directoryPath;
 			_directoryField.RegisterValueChangedCallback(evt => _directoryPath = evt.newValue);
@@ -118,7 +121,11 @@ namespace MiniIT.Snipe.Unity.Editor
 			SetControlsEnabled(false);
 			try
 			{
+#if SNIPE_8_0_OR_NEWER
+				await DownloadSpecsAndGenerateSnipeApi();
+#else
 				await DownloadSnipeApi();
+#endif
 				await Task.Yield();
 				AssetDatabase.Refresh();
 			}
@@ -128,7 +135,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		public async Task DownloadSnipeApi()
+		private async Task DownloadSnipeApi()
 		{
 			Debug.Log("DownloadSnipeApi - start");
 
@@ -147,19 +154,103 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				if (!response.IsSuccessStatusCode)
 				{
-					Debug.LogError($"DownloadSnipeApi - FAILED to get token; HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
+					Debug.LogError($"DownloadSnipeApi - FAILED to download SnipeApi; HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
 					return;
 				}
 
 				string filePath = Path.Combine(_directoryPath, SERVICE_FILE_NAME);
 
-				using (StreamWriter sw = File.CreateText(filePath))
+				await using (StreamWriter sw = File.CreateText(filePath))
 				{
 					await response.Content.CopyToAsync(sw.BaseStream);
 				}
+
+				//-------
+				// Specs
+
+				// url = $"https://edit.snipe.dev/api/v1/project/{SnipeToolsConfig.ProjectId}/code/meta";
+				//
+				// response = await loader.GetAsync(url);
+				//
+				// if (!response.IsSuccessStatusCode)
+				// {
+				// 	Debug.LogError($"DownloadSnipeApi - FAILED to download Specs; HTTP status: {(int)response.StatusCode} - {response.StatusCode}");
+				// 	return;
+				// }
+				//
+				// filePath = Path.Combine(_directoryPath, "SnipeApiSpecs.json");
+				//
+				// using (StreamWriter sw = File.CreateText(filePath))
+				// {
+				// 	await response.Content.CopyToAsync(sw.BaseStream);
+				// }
 			}
 
 			Debug.Log("DownloadSnipeApi - done");
+		}
+
+		private async Task DownloadSpecsAndGenerateSnipeApi()
+		{
+			Debug.Log("DownloadSpecsAndGenerateSnipeApi - start");
+
+			if (string.IsNullOrEmpty(SnipeToolsConfig.AuthKey))
+			{
+				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - FAILED to get token");
+				return;
+			}
+
+			if (SnipeToolsConfig.ProjectId <= 0)
+			{
+				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - ProjectId is not configured");
+				return;
+			}
+
+			// Download specs JSON
+			string specsJson = await SnipeApiSpecsDownloader.DownloadSpecsAsync(SnipeToolsConfig.ProjectId, SnipeToolsConfig.AuthKey);
+			if (string.IsNullOrEmpty(specsJson))
+			{
+				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - failed to download specs");
+				return;
+			}
+
+			// Save raw specs JSON alongside generated code for debugging
+
+			// ensure directory exists
+			string tempDir = "Temp";
+			if (!Directory.Exists(tempDir))
+			{
+				Directory.CreateDirectory(tempDir);
+			}
+			string specsPath = Path.Combine(tempDir, "SnipeApiSpecs.json");
+			if (File.Exists(specsPath))
+			{
+				File.Delete(specsPath);
+			}
+
+			try
+			{
+				Debug.Log($"DownloadSpecsAndGenerateSnipeApi - saving specs to: {specsPath}");
+				await File.WriteAllTextAsync(specsPath, specsJson, System.Text.Encoding.UTF8);
+			}
+			catch (System.Exception e)
+			{
+				Debug.LogWarning($"DownloadSpecsAndGenerateSnipeApi - failed to save specs file: {e}");
+			}
+
+			// Generate code from JSON
+			string generatedCode = SnipeApiGenerator.Generate(specsJson);
+			if (string.IsNullOrEmpty(generatedCode))
+			{
+				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - failed to generate code");
+				return;
+			}
+
+			// Write generated code to file
+			string servicePath = Path.Combine(_directoryPath, SERVICE_FILE_NAME);
+			await File.WriteAllTextAsync(servicePath, generatedCode, System.Text.Encoding.UTF8);
+			Debug.Log($"DownloadSpecsAndGenerateSnipeApi - generated {SERVICE_FILE_NAME} at path: {servicePath}");
+
+			Debug.Log("DownloadSpecsAndGenerateSnipeApi - done");
 		}
 	}
 }
