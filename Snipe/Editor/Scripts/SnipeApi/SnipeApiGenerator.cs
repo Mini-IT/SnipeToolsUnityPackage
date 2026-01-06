@@ -381,11 +381,17 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			bool hasInputs = method.inputs != null && method.inputs.Length > 0;
 
-			if (hasInputs)
+			if (hasInputs || !string.IsNullOrEmpty(method.actionID))
 			{
 				// requestData dictionary
 				Indent(sb, 3).AppendLine("var requestData = new Dictionary<string, object>()");
 				Indent(sb, 3).AppendLine("{");
+
+				if (!string.IsNullOrEmpty(method.actionID))
+				{
+					Indent(sb, 4).Append("[\"actionID\"] = \"").Append(method.actionID).Append('\"')
+						.AppendLine(method.inputs.Length > 0 ? "," : string.Empty);
+				}
 
 				for (int i = 0; i < method.inputs.Length; i++)
 				{
