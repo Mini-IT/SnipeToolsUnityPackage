@@ -1051,6 +1051,16 @@ namespace MiniIT.Snipe.Unity.Editor
 				if (string.IsNullOrEmpty(table.stringID))
 					continue;
 
+				// Skip predefined types
+				if (string.Equals(table.stringID, "Logic", StringComparison.OrdinalIgnoreCase) ||
+				    string.Equals(table.stringID, "Calendar", StringComparison.OrdinalIgnoreCase) ||
+				    string.Equals(table.stringID, "CalendarV2", StringComparison.OrdinalIgnoreCase) ||
+				    string.Equals(table.stringID, "Badges", StringComparison.OrdinalIgnoreCase) ||
+				    string.Equals(table.stringID, "Graphs", StringComparison.OrdinalIgnoreCase))
+				{
+					continue;
+				}
+
 				string itemClassName = "SnipeTable" + table.stringID + "Item";
 
 				Indent(sb, 1).AppendLine("[System.Serializable]");
