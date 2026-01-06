@@ -770,7 +770,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			return "object";
 		}
 
-		private static void GenerateResponseEvent(StringBuilder sb, MetagenResponse response)
+		private static void GenerateResponseEvent(StringBuilder sb, MetagenResponse response, string obsoleteMessageCallName = null)
 		{
 			if (response == null || string.IsNullOrEmpty(response.msgType) || string.IsNullOrEmpty(response.callName))
 				return;
@@ -778,8 +778,14 @@ namespace MiniIT.Snipe.Unity.Editor
 			string handlerName = response.callName + "Handler";
 			string eventName = "On" + response.callName;
 
+			if (obsoleteMessageCallName != null)
+			{
+				string obsoleteHandlerName = obsoleteMessageCallName + "Handler";
+				Indent(sb, 2).AppendLine($"[Obsolete(\"Use {obsoleteHandlerName} instead\")]");
+			}
+
 			Indent(sb, 2).Append("public delegate void ").Append(handlerName).AppendLine("(");
-			//sb.Append("string errorCode");
+
 
 			if (response.fields != null)
 			{
@@ -798,8 +804,33 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			sb.AppendLine(");");
+
+			if (obsoleteMessageCallName != null)
+			{
+				string obsoleteEventName = "On" + obsoleteMessageCallName;
+				Indent(sb, 2).AppendLine($"[Obsolete(\"Use {obsoleteEventName} instead\")]");
+			}
+
 			Indent(sb, 2).Append("public event ").Append(handlerName).Append(' ').Append(eventName).AppendLine(";")
 				.AppendLine();
+
+			// Legacy
+			if (obsoleteMessageCallName != null)
+			{
+				return;
+			}
+			if (response.msgType is "chat.msg" or "clan.msg")
+			{
+				string msgType = response.msgType;
+				string callName = response.callName;
+				response.msgType += ".legacy";
+				response.callName = "Msg";
+				GenerateResponseEvent(sb, response, callName);
+
+				// Restore values for later use
+				response.msgType = msgType;
+				response.callName = callName;
+			}
 		}
 
 		private static void GenerateOnMessageReceived(StringBuilder sb, MetagenModule module)
@@ -843,10 +874,34 @@ namespace MiniIT.Snipe.Unity.Editor
 						sb.Append(field.name);
 					}
 					sb.AppendLine(");");
+
+					// Legacy
+					if (response.msgType is "chat.msg" or "clan.msg")
+					{
+						Indent(sb, 4).Append("OnMsg").Append("?.Invoke(");
+						firstParam = true;
+						foreach (var field in response.fields)
+						{
+							if (!firstParam)
+							{
+								sb.Append(", ");
+							}
+							firstParam = false;
+
+							sb.Append(field.name);
+						}
+						sb.AppendLine(");");
+					}
 				}
 				else
 				{
 					Indent(sb, 4).Append(eventName).AppendLine("?.Invoke(errorCode);");
+
+					// Legacy
+					if (response.msgType is "chat.msg" or "clan.msg")
+					{
+						Indent(sb, 4).Append("OnMsg").AppendLine("?.Invoke(errorCode);");
+					}
 				}
 
 				Indent(sb, 3).AppendLine("}");
