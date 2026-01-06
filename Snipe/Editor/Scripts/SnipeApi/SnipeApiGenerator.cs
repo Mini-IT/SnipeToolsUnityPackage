@@ -490,6 +490,9 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				if (method.outputs != null && method.outputs.Length > 0)
 				{
+					Indent(sb, 4).AppendLine("if (errorCode == \"ok\"");
+					Indent(sb, 4).AppendLine("{");
+
 					foreach (var field in method.outputs)
 					{
 						// Skip errorCode in outputs since it's always the first parameter
@@ -498,7 +501,7 @@ namespace MiniIT.Snipe.Unity.Editor
 						GenerateOutputFieldExtraction(sb, field, 4);
 					}
 
-					Indent(sb, 4).Append("callback?.Invoke(errorCode");
+					Indent(sb, 5).Append("callback?.Invoke(errorCode");
 					foreach (var field in method.outputs)
 					{
 						// Skip errorCode in outputs since it's always the first parameter
@@ -511,10 +514,12 @@ namespace MiniIT.Snipe.Unity.Editor
 						sb.Append(", ").Append(paramName);
 					}
 					sb.AppendLine(");");
+
+					Indent(sb, 4).AppendLine("});");
 				}
 				else
 				{
-					Indent(sb, 4).AppendLine("callback?.Invoke(errorCode);");
+					Indent(sb, 5).AppendLine("callback?.Invoke(errorCode);");
 				}
 			}
 
