@@ -380,8 +380,9 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 2).AppendLine("{");
 
 			bool hasInputs = method.inputs != null && method.inputs.Length > 0;
+			bool hasRequestData = hasInputs || !string.IsNullOrEmpty(method.actionID);
 
-			if (hasInputs || !string.IsNullOrEmpty(method.actionID))
+			if (hasRequestData)
 			{
 				// requestData dictionary
 				Indent(sb, 3).AppendLine("var requestData = new Dictionary<string, object>()");
@@ -408,7 +409,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			// CreateRequest
 			Indent(sb, 3).Append("var request = CreateRequest(\"").Append(method.messageType).Append("\"");
-			if (hasInputs)
+			if (hasRequestData)
 			{
 				sb.Append(", requestData");
 			}
