@@ -1077,7 +1077,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				if (string.IsNullOrEmpty(table.stringID))
 					continue;
 
-				string itemClassName = "SnipeTable" + table.stringID + "Item";
+				string itemClassName = string.IsNullOrEmpty(table.itemClass) ? "SnipeTable" + table.stringID + "Item" : table.itemClass;
 				Indent(sb, 2).Append("public SnipeTable<").Append(itemClassName).Append("> ").Append(table.stringID)
 					.AppendLine(" { get; }");
 			}
@@ -1091,7 +1091,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				if (string.IsNullOrEmpty(table.stringID))
 					continue;
 
-				string itemClassName = "SnipeTable" + table.stringID + "Item";
+				string itemClassName = string.IsNullOrEmpty(table.itemClass) ? "SnipeTable" + table.stringID + "Item" : table.itemClass;
 				Indent(sb, 3).Append(table.stringID).Append(" = RegisterTable(new SnipeTable<")
 					.Append(itemClassName).Append(">(), \"").Append(table.stringID).AppendLine("\");");
 			}
@@ -1101,6 +1101,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			sb.AppendLine();
 
 			// Table item classes
+			HashSet<string> uniqueTableItemTypes = new HashSet<string>();
 			foreach (var table in root.tables)
 			{
 				if (string.IsNullOrEmpty(table.stringID))
@@ -1116,7 +1117,13 @@ namespace MiniIT.Snipe.Unity.Editor
 					continue;
 				}
 
-				string itemClassName = "SnipeTable" + table.stringID + "Item";
+				string itemClassName = string.IsNullOrEmpty(table.itemClass) ? "SnipeTable" + table.stringID + "Item" : table.itemClass;
+
+				// Some tables may share same item types. Don't emit them multiple tymes
+				if (!uniqueTableItemTypes.Add(itemClassName))
+				{
+					continue;
+				}
 
 				Indent(sb, 1).AppendLine("[System.Serializable]");
 				Indent(sb, 1).Append("public sealed class ").Append(itemClassName).AppendLine(" : SnipeTableItem");
