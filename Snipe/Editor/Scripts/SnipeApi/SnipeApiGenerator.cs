@@ -235,6 +235,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				string moduleClass = "SnipeApiModule" + module.name;
 				bool isUserAttr = module.name == "UserAttr";
+				bool isGameVars = module.name == "Vars";
 
 				Indent(sb, 1).Append("public sealed class ").Append(moduleClass).AppendLine(" : SnipeApiModule");
 				Indent(sb, 1).AppendLine("{");
@@ -244,6 +245,20 @@ namespace MiniIT.Snipe.Unity.Editor
 				{
 					Indent(sb, 2).AppendLine("public UserAttributes UserAttributes { get; private set; }");
 					Indent(sb, 2).AppendLine("public bool Initialized { get; private set; }");
+					sb.AppendLine();
+				}
+
+				// Special properties for Vars module (strongly-typed Game Variables cache)
+				if (isGameVars && root.gameVars != null && root.gameVars.Length > 0)
+				{
+					foreach (var gv in root.gameVars)
+					{
+						if (gv == null || string.IsNullOrEmpty(gv.property))
+							continue;
+
+						string csType = MapTypeToCs(!string.IsNullOrEmpty(gv.resolvedType) ? gv.resolvedType : gv.type, null);
+						Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(gv.property).AppendLine(" { get; private set; }");
+					}
 					sb.AppendLine();
 				}
 
@@ -270,7 +285,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				{
 					foreach (var method in module.methods)
 					{
-						GenerateMethod(sb, method);
+						GenerateMethod(sb, method, isGameVars ? root.gameVars : null, isGameVars);
 					}
 				}
 
@@ -291,6 +306,11 @@ namespace MiniIT.Snipe.Unity.Editor
 		}
 
 		private static void GenerateMethod(StringBuilder sb, MetagenMethod method)
+		{
+			GenerateMethod(sb, method, null, false);
+		}
+
+		private static void GenerateMethod(StringBuilder sb, MetagenMethod method, MetagenGameVar[] gameVars, bool isGameVarsModule)
 		{
 			if (method == null || string.IsNullOrEmpty(method.callName) || string.IsNullOrEmpty(method.messageType))
 				return;
@@ -390,6 +410,13 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			// Request callback - special handling for UserAttr.GetAll
 			bool isUserAttrGetAll = method.messageType == "attr.getAll";
+			bool isVarsGetAll = isGameVarsModule
+				&& string.Equals(methodName, "GetAll", StringComparison.Ordinal)
+				&& method.outputs != null
+				&& HasFieldNamed(method.outputs, "data")
+				&& gameVars != null
+				&& gameVars.Length > 0;
+
 			if (isUserAttrGetAll)
 			{
 				Indent(sb, 3).AppendLine("request.Request(async (errorCode, responseData) =>");
@@ -398,6 +425,54 @@ namespace MiniIT.Snipe.Unity.Editor
 				Indent(sb, 4).AppendLine("await AlterTask.Yield();");
 				Indent(sb, 4).Append("callback?.Invoke(errorCode,").AppendLine();
 				Indent(sb, 5).AppendLine("this.UserAttributes);");
+			}
+			else if (isVarsGetAll)
+			{
+				Indent(sb, 3).AppendLine("request.Request((errorCode, responseData) =>");
+				Indent(sb, 3).AppendLine("{");
+
+				// Build GameVariable list from responseData["data"]
+				Indent(sb, 4).AppendLine("var o_data = new List<GameVariable>();");
+				Indent(sb, 4).AppendLine("if (responseData[\"data\"] is IList src_data)");
+				Indent(sb, 4).AppendLine("{");
+				Indent(sb, 5).AppendLine("foreach (Dictionary<string, object> o in src_data)");
+				Indent(sb, 5).AppendLine("{");
+				Indent(sb, 6).AppendLine("var tmp = new GameVariable(o);");
+				Indent(sb, 6).AppendLine("o_data.Add(tmp);");
+
+				// Populate strongly-typed cache fields from tmp.key/tmp.val
+				foreach (var gv in gameVars)
+				{
+					if (gv == null || string.IsNullOrEmpty(gv.stringID) || string.IsNullOrEmpty(gv.property))
+						continue;
+
+					string csType = MapTypeToCs(!string.IsNullOrEmpty(gv.resolvedType) ? gv.resolvedType : gv.type, null);
+					EmitGameVarAssignment(sb, gv.stringID, gv.property, csType, 6);
+				}
+
+				Indent(sb, 5).AppendLine("}");
+				Indent(sb, 4).AppendLine("}");
+
+				// Extract other outputs (if any) + invoke callback
+				foreach (var field in method.outputs)
+				{
+					if (field.name == "errorCode" || field.name == "data")
+						continue;
+					GenerateOutputFieldExtraction(sb, field, 4);
+				}
+
+				Indent(sb, 4).Append("callback?.Invoke(errorCode");
+				foreach (var field in method.outputs)
+				{
+					if (field.name == "errorCode")
+						continue;
+
+					if (field.name == "data")
+						sb.Append(", o_data");
+					else
+						sb.Append(", ").Append(field.name);
+				}
+				sb.AppendLine(");");
 			}
 			else
 			{
@@ -438,6 +513,96 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 3).AppendLine("return true;");
 			Indent(sb, 2).AppendLine("}");
 			sb.AppendLine();
+		}
+
+		private static bool HasFieldNamed(MetagenField[] fields, string name)
+		{
+			if (fields == null)
+				return false;
+			for (int i = 0; i < fields.Length; i++)
+			{
+				if (fields[i] != null && fields[i].name == name)
+					return true;
+			}
+			return false;
+		}
+
+		private static void EmitGameVarAssignment(StringBuilder sb, string stringId, string propertyName, string csType, int indent)
+		{
+			Indent(sb, indent).Append("if (tmp.key == \"").Append(stringId).AppendLine("\")");
+			Indent(sb, indent).AppendLine("{");
+
+			if (csType.StartsWith("List<", StringComparison.Ordinal) && csType.EndsWith(">", StringComparison.Ordinal))
+			{
+				string itemType = GetArrayItemType(csType);
+				string srcName = "src_" + propertyName;
+				string itemVar = "o_" + propertyName;
+
+				Indent(sb, indent + 1).Append(propertyName).Append(" = new ").Append(csType).AppendLine("();");
+				Indent(sb, indent + 1).Append("if (tmp.val is IList ").Append(srcName).AppendLine(")");
+				Indent(sb, indent + 1).AppendLine("{");
+				Indent(sb, indent + 2).Append("foreach (var ").Append(itemVar).Append(" in ").Append(srcName).AppendLine(")");
+				Indent(sb, indent + 2).AppendLine("{");
+
+				if (itemType == "int")
+				{
+					Indent(sb, indent + 3).Append(propertyName).Append(".Add(Convert.ToInt32(").Append(itemVar).AppendLine("));");
+				}
+				else if (itemType == "float")
+				{
+					Indent(sb, indent + 3).Append(propertyName).Append(".Add(Convert.ToSingle(").Append(itemVar).AppendLine("));");
+				}
+				else if (itemType == "bool")
+				{
+					Indent(sb, indent + 3).Append(propertyName).Append(".Add(Convert.ToBoolean(").Append(itemVar).AppendLine("));");
+				}
+				else if (itemType == "string")
+				{
+					Indent(sb, indent + 3).Append(propertyName).Append(".Add(").Append(itemVar).AppendLine("?.ToString());");
+				}
+				else if (itemType == "object")
+				{
+					Indent(sb, indent + 3).Append(propertyName).Append(".Add(").Append(itemVar).AppendLine(");");
+				}
+				else
+				{
+					// custom element type
+					Indent(sb, indent + 3).Append("if (").Append(itemVar).Append(" is Dictionary<string, object> map_").Append(propertyName).AppendLine(")");
+					Indent(sb, indent + 3).AppendLine("{");
+					Indent(sb, indent + 4).Append(propertyName).Append(".Add(new ").Append(itemType).Append("(map_").Append(propertyName).AppendLine("));");
+					Indent(sb, indent + 3).AppendLine("}");
+				}
+
+				Indent(sb, indent + 2).AppendLine("}");
+				Indent(sb, indent + 1).AppendLine("}");
+			}
+			else if (csType == "int")
+			{
+				Indent(sb, indent + 1).Append(propertyName).AppendLine(" = Convert.ToInt32(tmp.val);");
+			}
+			else if (csType == "float")
+			{
+				Indent(sb, indent + 1).Append(propertyName).AppendLine(" = Convert.ToSingle(tmp.val);");
+			}
+			else if (csType == "bool")
+			{
+				Indent(sb, indent + 1).Append(propertyName).AppendLine(" = Convert.ToBoolean(tmp.val);");
+			}
+			else if (csType == "string")
+			{
+				Indent(sb, indent + 1).Append(propertyName).AppendLine(" = tmp.val?.ToString();");
+			}
+			else if (csType == "object")
+			{
+				Indent(sb, indent + 1).Append(propertyName).AppendLine(" = tmp.val;");
+			}
+			else
+			{
+				// custom type / json object – try dictionary-based
+				Indent(sb, indent + 1).Append(propertyName).Append(" = new ").Append(csType).AppendLine("(tmp.val as Dictionary<string, object>);");
+			}
+
+			Indent(sb, indent).AppendLine("}");
 		}
 
 		private static string ExtractMethodName(MetagenMethod method)
@@ -1039,6 +1204,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			public MetagenModule[] modules;
 			public MetagenType[] types;
 			public MetagenUserAttribute[] userAttributes;
+			public MetagenGameVar[] gameVars;
 			public MetagenTable[] tables;
 			public MetagenMergeableRequest[] mergeableRequests;
 		}
@@ -1114,6 +1280,15 @@ namespace MiniIT.Snipe.Unity.Editor
 			public string name;
 			public string clientRead;
 			public string clientWrite;
+		}
+
+		private sealed class MetagenGameVar
+		{
+			public string stringID;
+			public string type;
+			public string property;
+			public string resolvedType;
+			public MetagenField[] fields;
 		}
 
 		#endregion
