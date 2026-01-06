@@ -390,14 +390,17 @@ namespace MiniIT.Snipe.Unity.Editor
 				if (!string.IsNullOrEmpty(method.actionID))
 				{
 					Indent(sb, 4).Append("[\"actionID\"] = \"").Append(method.actionID).Append('\"')
-						.AppendLine(method.inputs.Length > 0 ? "," : string.Empty);
+						.AppendLine(hasInputs && method.inputs.Length > 0 ? "," : string.Empty);
 				}
 
-				for (int i = 0; i < method.inputs.Length; i++)
+				if (hasInputs)
 				{
-					var field = method.inputs[i];
-					Indent(sb, 4).Append("[\"").Append(field.name).Append("\"] = ").Append(field.name)
-						.AppendLine(i < method.inputs.Length - 1 ? "," : string.Empty);
+					for (int i = 0; i < method.inputs.Length; i++)
+					{
+						var field = method.inputs[i];
+						Indent(sb, 4).Append("[\"").Append(field.name).Append("\"] = ").Append(field.name)
+							.AppendLine(i < method.inputs.Length - 1 ? "," : string.Empty);
+					}
 				}
 
 				Indent(sb, 3).AppendLine("};");
