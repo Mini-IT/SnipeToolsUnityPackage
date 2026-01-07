@@ -443,7 +443,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				// Build GameVariable list from responseData["data"]
 				Indent(sb, 4).AppendLine("var o_data = new List<GameVariable>();");
-				Indent(sb, 4).AppendLine("if (responseData[\"data\"] is IList src_data)");
+				Indent(sb, 4).AppendLine("if (responseData.TryGetValue(\"data\", out var d) && d is IList src_data)");
 				Indent(sb, 4).AppendLine("{");
 				Indent(sb, 5).AppendLine("foreach (Dictionary<string, object> o in src_data)");
 				Indent(sb, 5).AppendLine("{");
@@ -745,8 +745,8 @@ namespace MiniIT.Snipe.Unity.Editor
 			else if (field.type == "array")
 			{
 				Indent(sb, indent).Append("var ").Append(varName).Append(" = new ").Append(csType).AppendLine("();");
-				Indent(sb, indent).Append("if (responseData[\"").Append(field.name)
-					.Append("\"] is IList src_").Append(field.name).Append(')').AppendLine();
+				Indent(sb, indent).Append("if (responseData.TryGetValue(\"").Append(field.name)
+					.Append("\", out var d) && d is IList src_").Append(field.name).Append(')').AppendLine();
 				Indent(sb, indent).AppendLine("{");
 
 				// assume arrays of simple dictionaries / scalars; keep generic
@@ -977,8 +977,8 @@ namespace MiniIT.Snipe.Unity.Editor
 							string itemType = GetArrayItemType(listType);
 
 							Indent(sb, 3).Append("var ").Append(field.name).Append(" = new ").Append(listType).AppendLine("();");
-							Indent(sb, 3).Append("if (data[\"").Append(field.name)
-								.Append("\"] is IList src_").Append(field.name).Append(')').AppendLine();
+							Indent(sb, 3).Append("if (data.TryGetValue(\"").Append(field.name)
+								.Append("\", out var d) && d is IList src_").Append(field.name).Append(')').AppendLine();
 							Indent(sb, 3).AppendLine("{");
 							Indent(sb, 4).Append("foreach (").Append(itemType).Append(" o in src_").Append(field.name).AppendLine(")");
 							Indent(sb, 5).Append(field.name).AppendLine(".Add(o);");
