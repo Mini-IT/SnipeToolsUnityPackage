@@ -433,8 +433,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				Indent(sb, 3).AppendLine("{");
 				Indent(sb, 4).AppendLine("this.Initialized = true;");
 				Indent(sb, 4).AppendLine("await AlterTask.Yield();");
-				Indent(sb, 4).Append("callback?.Invoke(errorCode,").AppendLine();
-				Indent(sb, 5).AppendLine("this.UserAttributes);");
+				Indent(sb, 4).AppendLine("callback?.Invoke(errorCode, this.UserAttributes);");
 			}
 			else if (isVarsGetAll)
 			{
