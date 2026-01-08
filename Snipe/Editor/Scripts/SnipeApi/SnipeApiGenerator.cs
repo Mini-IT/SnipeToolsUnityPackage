@@ -285,7 +285,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				{
 					foreach (var method in module.methods)
 					{
-						GenerateMethod(sb, method, isGameVars ? root.gameVars : null, isGameVars);
+						GenerateMethod(sb, root, method, isGameVars ? root.gameVars : null, isGameVars);
 					}
 				}
 
@@ -297,7 +297,7 @@ namespace MiniIT.Snipe.Unity.Editor
 						GenerateResponseEvent(sb, response);
 					}
 
-					GenerateOnMessageReceived(sb, module);
+					GenerateOnMessageReceived(sb, root, module);
 				}
 
 				Indent(sb, 1).AppendLine("}");
@@ -305,12 +305,12 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static void GenerateMethod(StringBuilder sb, MetagenMethod method)
+		private static void GenerateMethod(StringBuilder sb, MetagenRoot root, MetagenMethod method)
 		{
-			GenerateMethod(sb, method, null, false);
+			GenerateMethod(sb, root, method, null, false);
 		}
 
-		private static void GenerateMethod(StringBuilder sb, MetagenMethod method, MetagenGameVar[] gameVars, bool isGameVarsModule)
+		private static void GenerateMethod(StringBuilder sb, MetagenRoot root, MetagenMethod method, MetagenGameVar[] gameVars, bool isGameVarsModule)
 		{
 			if (method == null || string.IsNullOrEmpty(method.callName) || string.IsNullOrEmpty(method.messageType))
 				return;
@@ -458,7 +458,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				{
 					if (field.name == "errorCode" || field.name == "data")
 						continue;
-					GenerateOutputFieldExtraction(sb, field, 4);
+					GenerateOutputFieldExtraction(sb, root, field, 4);
 				}
 
 				Indent(sb, 4).Append("callback?.Invoke(errorCode");
@@ -486,7 +486,7 @@ namespace MiniIT.Snipe.Unity.Editor
 						// Skip errorCode in outputs since it's always the first parameter
 						if (field.name == "errorCode")
 							continue;
-						GenerateOutputFieldExtraction(sb, field, 4);
+						GenerateOutputFieldExtraction(sb, root, field, 4);
 					}
 
 					Indent(sb, 4).Append("callback?.Invoke(errorCode");
@@ -715,7 +715,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 2).AppendLine("/// </summary>");
 		}
 
-		private static void GenerateOutputFieldExtraction(StringBuilder sb, MetagenField field, int indent)
+		private static void GenerateOutputFieldExtraction(StringBuilder sb, MetagenRoot root, MetagenField field, int indent)
 		{
 			string csType = MapTypeToCs(field.type, field.itemType);
 			string varName = field.name;
@@ -725,7 +725,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
 					.Append(" = responseData.SafeGetString(\"").Append(field.name).AppendLine("\");");
 			}
-			else if (field.type == "int" || field.type == "float" || field.type == "boolean")
+			else if (field.type == "int" || field.type == "float" || field.type == "boolean" || csType == "byte[]")
 			{
 				string genericType = csType == "bool" ? "bool" : csType;
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
@@ -735,15 +735,23 @@ namespace MiniIT.Snipe.Unity.Editor
 			else if (field.type == "array")
 			{
 				string listVarName = field.name + "List";
+				string itemType = GetArrayItemType(csType);
 
 				Indent(sb, indent).Append("var ").Append(varName).Append(" = new ").Append(csType).AppendLine("();");
 				Indent(sb, indent).AppendLine($"if (responseData.TryGetValue(\"{field.name}\", out var {listVarName}) && {listVarName} is IList src_{field.name})");
 				Indent(sb, indent).AppendLine("{");
 
 				// assume arrays of simple dictionaries / scalars; keep generic
-				Indent(sb, indent + 1).Append("foreach (var o in src_").Append(field.name).Append(')').AppendLine();
-				Indent(sb, indent + 2).Append(varName).Append(".Add((").Append(GetArrayItemType(csType))
-					.AppendLine(")o);");
+				Indent(sb, indent + 1).Append("foreach (Dictionary<string, object> o in src_").Append(field.name).Append(')').AppendLine();
+				Indent(sb, indent + 2).Append(varName).Append(".Add(");
+				if (IsCustomType(root, itemType))
+				{
+					sb.Append("new ").Append(itemType).AppendLine("(o));");
+				}
+				else
+				{
+					sb.AppendLine("o);");
+				}
 
 				Indent(sb, indent).AppendLine("}");
 			}
@@ -834,7 +842,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static void GenerateOnMessageReceived(StringBuilder sb, MetagenModule module)
+		private static void GenerateOnMessageReceived(StringBuilder sb, MetagenRoot root, MetagenModule module)
 		{
 			Indent(sb, 2).AppendLine("private void OnMessageReceived(string messageType, string errorCode, IDictionary<string, object> responseData, int requestId)");
 			Indent(sb, 2).AppendLine("{");
@@ -859,7 +867,7 @@ namespace MiniIT.Snipe.Unity.Editor
 						if (field.name == "errorCode")
 							continue;
 
-						GenerateOutputFieldExtraction(sb, field, 4);
+						GenerateOutputFieldExtraction(sb, root, field, 4);
 					}
 
 					Indent(sb, 4).Append(eventName).Append("?.Invoke(");
@@ -911,6 +919,19 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			Indent(sb, 2).AppendLine("}");
+		}
+
+		private static bool IsCustomType(MetagenRoot root, string typeName)
+		{
+			foreach (var type in root.types)
+			{
+				if (string.IsNullOrEmpty(type.name))
+					continue;
+
+				if (string.Equals(type.name, typeName, StringComparison.OrdinalIgnoreCase))
+					return true;
+			}
+			return false;
 		}
 
 		private static void GenerateTypes(StringBuilder sb, MetagenRoot root)
@@ -967,12 +988,39 @@ namespace MiniIT.Snipe.Unity.Editor
 							string listType = csType;
 							string itemType = GetArrayItemType(listType);
 							string listVarName = field.name + "List";
+							bool isCustomType = IsCustomType(root, itemType);
 
 							Indent(sb, 3).Append("var ").Append(field.name).Append(" = new ").Append(listType).AppendLine("();");
 							Indent(sb, 3).AppendLine($"if (data.TryGetValue(\"{field.name}\", out var {listVarName}) && {listVarName} is IList src_{field.name})");
 							Indent(sb, 3).AppendLine("{");
-							Indent(sb, 4).Append("foreach (").Append(itemType).Append(" o in src_").Append(field.name).AppendLine(")");
-							Indent(sb, 5).Append(field.name).AppendLine(".Add(o);");
+							Indent(sb, 4).Append("foreach (");
+							if (isCustomType)
+							{
+								sb.Append("Dictionary<string, object> ");
+							}
+							else
+							{
+								sb.Append("var ");
+							}
+							sb.AppendLine($"o in src_{field.name})");
+
+							Indent(sb, 5).Append(field.name).Append(".Add(");
+							if (isCustomType)
+							{
+								sb.Append($"new {itemType}(o)");
+							}
+							else
+							{
+								string preparedType = itemType switch
+								{
+									"int" => "Convert.ToInt32(o)",
+									"float" => "Convert.ToSingle(o)",
+									"bool" => "Convert.ToBoolean(o)",
+									_ => "o"
+								};
+								sb.Append(preparedType);
+							}
+							sb.AppendLine(");");
 							Indent(sb, 3).AppendLine("}");
 							Indent(sb, 3).Append("this.").Append(field.name).Append(" = ").Append(field.name).AppendLine(";");
 						}
@@ -1199,6 +1247,9 @@ namespace MiniIT.Snipe.Unity.Editor
 					return "bool";
 				case "array":
 					{
+						if (itemType == "byte")
+							return "byte[]";
+
 						string elementType = MapTypeToCs(itemType, null);
 						return $"List<{elementType}>";
 					}
