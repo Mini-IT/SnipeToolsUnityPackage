@@ -744,9 +744,10 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 			else if (field.type == "array")
 			{
+				string listVarName = field.name + "List";
+
 				Indent(sb, indent).Append("var ").Append(varName).Append(" = new ").Append(csType).AppendLine("();");
-				Indent(sb, indent).Append("if (responseData.TryGetValue(\"").Append(field.name)
-					.Append("\", out var d) && d is IList src_").Append(field.name).Append(')').AppendLine();
+				Indent(sb, indent).AppendLine($"if (responseData.TryGetValue(\"{field.name}\", out var {listVarName}) && {listVarName} is IList src_{field.name})");
 				Indent(sb, indent).AppendLine("{");
 
 				// assume arrays of simple dictionaries / scalars; keep generic
@@ -975,10 +976,10 @@ namespace MiniIT.Snipe.Unity.Editor
 						{
 							string listType = csType;
 							string itemType = GetArrayItemType(listType);
+							string listVarName = field.name + "List";
 
 							Indent(sb, 3).Append("var ").Append(field.name).Append(" = new ").Append(listType).AppendLine("();");
-							Indent(sb, 3).Append("if (data.TryGetValue(\"").Append(field.name)
-								.Append("\", out var d) && d is IList src_").Append(field.name).Append(')').AppendLine();
+							Indent(sb, 3).AppendLine($"if (data.TryGetValue(\"{field.name}\", out var {listVarName}) && {listVarName} is IList src_{field.name})");
 							Indent(sb, 3).AppendLine("{");
 							Indent(sb, 4).Append("foreach (").Append(itemType).Append(" o in src_").Append(field.name).AppendLine(")");
 							Indent(sb, 5).Append(field.name).AppendLine(".Add(o);");
