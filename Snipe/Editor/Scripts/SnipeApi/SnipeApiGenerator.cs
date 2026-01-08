@@ -380,40 +380,31 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 2).AppendLine("{");
 
 			bool hasInputs = method.inputs != null && method.inputs.Length > 0;
-			bool hasRequestData = hasInputs || !string.IsNullOrEmpty(method.actionID);
 
-			if (hasRequestData)
+			// requestData dictionary
+			Indent(sb, 3).AppendLine("var requestData = new Dictionary<string, object>()");
+			Indent(sb, 3).AppendLine("{");
+
+			if (!string.IsNullOrEmpty(method.actionID))
 			{
-				// requestData dictionary
-				Indent(sb, 3).AppendLine("var requestData = new Dictionary<string, object>()");
-				Indent(sb, 3).AppendLine("{");
-
-				if (!string.IsNullOrEmpty(method.actionID))
-				{
-					Indent(sb, 4).Append("[\"actionID\"] = \"").Append(method.actionID).Append('\"')
-						.AppendLine(hasInputs && method.inputs.Length > 0 ? "," : string.Empty);
-				}
-
-				if (hasInputs)
-				{
-					for (int i = 0; i < method.inputs.Length; i++)
-					{
-						var field = method.inputs[i];
-						Indent(sb, 4).Append("[\"").Append(field.name).Append("\"] = ").Append(field.name)
-							.AppendLine(i < method.inputs.Length - 1 ? "," : string.Empty);
-					}
-				}
-
-				Indent(sb, 3).AppendLine("};");
+				Indent(sb, 4).Append("[\"actionID\"] = \"").Append(method.actionID).Append('\"')
+					.AppendLine(hasInputs && method.inputs.Length > 0 ? "," : string.Empty);
 			}
+
+			if (hasInputs)
+			{
+				for (int i = 0; i < method.inputs.Length; i++)
+				{
+					var field = method.inputs[i];
+					Indent(sb, 4).Append("[\"").Append(field.name).Append("\"] = ").Append(field.name)
+						.AppendLine(i < method.inputs.Length - 1 ? "," : string.Empty);
+				}
+			}
+
+			Indent(sb, 3).AppendLine("};");
 
 			// CreateRequest
-			Indent(sb, 3).Append("var request = CreateRequest(\"").Append(method.messageType).Append("\"");
-			if (hasRequestData)
-			{
-				sb.Append(", requestData");
-			}
-			sb.AppendLine(");").AppendLine();
+			Indent(sb, 3).AppendLine($"var request = CreateRequest(\"{method.messageType}\", requestData);");
 			Indent(sb, 3).AppendLine("if (request == null)");
 			Indent(sb, 4).AppendLine("return false;");
 			sb.AppendLine();
