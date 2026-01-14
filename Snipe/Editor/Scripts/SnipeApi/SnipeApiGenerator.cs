@@ -1114,41 +1114,57 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		private static void GenerateTables(StringBuilder sb, MetagenRoot root)
 		{
-			if (root.tables == null || root.tables.Length == 0)
-				return;
+			bool hasTables = root.tables != null && root.tables.Length > 0;
 
 			// SnipeTables
+			// This class must be generated event if root.tables == null
 			Indent(sb, 1).AppendLine("public sealed class SnipeTables : SnipeApiTables");
 			Indent(sb, 1).AppendLine("{");
 
-			foreach (var table in root.tables)
+			if (hasTables)
 			{
-				if (string.IsNullOrEmpty(table.stringID))
-					continue;
+				foreach (var table in root.tables)
+				{
+					if (string.IsNullOrEmpty(table.stringID))
+						continue;
 
-				string itemClassName = string.IsNullOrEmpty(table.itemClass) ? "SnipeTable" + table.stringID + "Item" : table.itemClass;
-				Indent(sb, 2).Append("public SnipeTable<").Append(itemClassName).Append("> ").Append(table.stringID)
-					.AppendLine(" { get; }");
+					string itemClassName = string.IsNullOrEmpty(table.itemClass) ? "SnipeTable" + table.stringID + "Item" : table.itemClass;
+					Indent(sb, 2).Append("public SnipeTable<").Append(itemClassName).Append("> ").Append(table.stringID)
+						.AppendLine(" { get; }");
+				}
+
+				sb.AppendLine();
 			}
 
-			sb.AppendLine();
+			// Constructor
 			Indent(sb, 2).AppendLine("public SnipeTables()");
 			Indent(sb, 2).AppendLine("{");
 
-			foreach (var table in root.tables)
+			if (hasTables)
 			{
-				if (string.IsNullOrEmpty(table.stringID))
-					continue;
+				foreach (var table in root.tables)
+				{
+					if (string.IsNullOrEmpty(table.stringID))
+						continue;
 
-				string itemClassName = string.IsNullOrEmpty(table.itemClass) ? "SnipeTable" + table.stringID + "Item" : table.itemClass;
-				Indent(sb, 3).Append(table.stringID).Append(" = RegisterTable(new SnipeTable<")
-					.Append(itemClassName).Append(">(), \"").Append(table.stringID).AppendLine("\");");
+					string itemClassName = string.IsNullOrEmpty(table.itemClass) ? "SnipeTable" + table.stringID + "Item" : table.itemClass;
+					Indent(sb, 3).Append(table.stringID).Append(" = RegisterTable(new SnipeTable<")
+						.Append(itemClassName).Append(">(), \"").Append(table.stringID).AppendLine("\");");
+				}
 			}
 
 			Indent(sb, 2).AppendLine("}");
 			Indent(sb, 1).AppendLine("}");
 			sb.AppendLine();
 
+			if (hasTables)
+			{
+				GenerateTableItemClasses(sb, root);
+			}
+		}
+
+		private static void GenerateTableItemClasses(StringBuilder sb, MetagenRoot root)
+		{
 			// Table item classes
 			HashSet<string> uniqueTableItemTypes = new HashSet<string>();
 			foreach (var table in root.tables)
