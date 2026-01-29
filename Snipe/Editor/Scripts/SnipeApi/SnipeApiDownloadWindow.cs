@@ -15,8 +15,8 @@ namespace MiniIT.Snipe.Unity.Editor
 	{
 #if SNIPE_8_0_OR_NEWER
 		private const string SNIPE_VERSION_SUFFIX = "V8";
-#elif SNIPE_7_1_OR_NEWER
-		private const string SNIPE_VERSION_SUFFIX = "V71";
+#elif SNIPE_7_2_OR_NEWER
+		private const string SNIPE_VERSION_SUFFIX = "V72";
 #else
 		private const string SNIPE_VERSION_SUFFIX = "V7";
 #endif
