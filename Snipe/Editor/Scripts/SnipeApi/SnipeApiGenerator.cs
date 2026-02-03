@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Debug = UnityEngine.Debug;
 
@@ -334,6 +335,9 @@ namespace MiniIT.Snipe.Unity.Editor
 					// if (field.name == "errorCode")
 					// 	continue;
 
+					if (field.name == "_version")
+						continue;
+
 					if (!first)
 					{
 						sb.AppendLine(",");
@@ -486,6 +490,8 @@ namespace MiniIT.Snipe.Unity.Editor
 						// Skip errorCode in outputs since it's always the first parameter
 						if (field.name == "errorCode")
 							continue;
+						if (field.name == "_version")
+							continue;
 						GenerateOutputFieldExtraction(sb, root, field, 4);
 					}
 
@@ -494,6 +500,8 @@ namespace MiniIT.Snipe.Unity.Editor
 					{
 						// Skip errorCode in outputs since it's always the first parameter
 						if (field.name == "errorCode")
+							continue;
+						if (field.name == "_version")
 							continue;
 
 						string paramName = (method.messageType == "attr.getAll" && field.name == "data")
@@ -691,6 +699,9 @@ namespace MiniIT.Snipe.Unity.Editor
 				Indent(sb, 2).AppendLine("/// Output:<ul>");
 				foreach (var field in method.outputs)
 				{
+					if (field.name == "_version")
+						continue;
+
 					string csType = MapTypeToCs(field.type, field.itemType);
 					string typeName = GetTypeDisplayName(csType);
 					string desc = !string.IsNullOrEmpty(field.description) ? ". " + field.description : "";
@@ -1190,9 +1201,33 @@ namespace MiniIT.Snipe.Unity.Editor
 					continue;
 				}
 
+				bool hasAttrs = table.fields != null && table.fields.Any(f => f.isAttr);
+				if (hasAttrs)
+				{
+					Indent(sb, 1).Append("public sealed class ").Append(itemClassName).AppendLine("Attrs");
+					Indent(sb, 1).AppendLine("{");
+					foreach (var field in table.fields)
+					{
+						if (!field.isAttr)
+						{
+							continue;
+						}
+
+						string csType = MapTypeToCs(field.type, null);
+						Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(field.id)
+							.AppendLine(" { get; set; }");
+					}
+					Indent(sb, 1).AppendLine("}").AppendLine();
+				}
+
 				Indent(sb, 1).AppendLine("[System.Serializable]");
 				Indent(sb, 1).Append("public sealed class ").Append(itemClassName).AppendLine(" : SnipeTableItem");
 				Indent(sb, 1).AppendLine("{");
+
+				if (hasAttrs)
+				{
+					Indent(sb, 2).Append("public ").Append(itemClassName).AppendLine("Attrs attrs { get; set; }").AppendLine();
+				}
 
 				if (table.fields != null)
 				{
@@ -1210,8 +1245,17 @@ namespace MiniIT.Snipe.Unity.Editor
 						Indent(sb, 2).AppendLine("#endif");
 
 						string csType = MapTypeToCs(field.type, null);
-						Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(field.id)
-							.AppendLine(" { get; set; }").AppendLine();
+
+						if (field.isAttr)
+						{
+							Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(field.id)
+								.Append(" => attrs?.").Append(field.id).AppendLine(" ?? default;").AppendLine();
+						}
+						else
+						{
+							Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(field.id)
+								.AppendLine(" { get; set; }").AppendLine();
+						}
 					}
 				}
 
