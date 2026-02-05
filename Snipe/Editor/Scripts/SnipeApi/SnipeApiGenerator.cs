@@ -133,7 +133,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Indent(sb, 2).Append("public override TimeSpan GetServerTimeZoneOffset() => TimeSpan.FromHours(")
 				.Append(timezoneHours.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)).AppendLine(");");
-			Indent(sb, 2).AppendLine("public override AbstractSnipeApiService CreateSnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth) => new SnipeApiService(communicator, auth);");
+			GenerateContextFactoryCreateSnipeApiService(sb);
 			GenerateContextFactoryCreateTables(sb);
 			Indent(sb, 1).AppendLine("}");
 			sb.AppendLine();
@@ -143,6 +143,11 @@ namespace MiniIT.Snipe.Unity.Editor
 		{
 			Indent(sb, 2).AppendLine("public SnipeApiContextFactory(ISnipeManager tablesProvider, SnipeConfigBuilder configBuilder)");
 			Indent(sb, 3).AppendLine(": base(tablesProvider, configBuilder) { }");
+		}
+
+		protected virtual void GenerateContextFactoryCreateSnipeApiService(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public override AbstractSnipeApiService CreateSnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth) => new SnipeApiService(communicator, auth);");
 		}
 
 		protected virtual void GenerateContextFactoryCreateTables(StringBuilder sb)
@@ -160,7 +165,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			sb.AppendLine();
 		}
 
-		protected static void GenerateServiceClass(StringBuilder sb, MetagenRoot root)
+		protected void GenerateServiceClass(StringBuilder sb, MetagenRoot root)
 		{
 			Indent(sb, 1).AppendLine("public sealed class SnipeApiService : AbstractSnipeApiService");
 			Indent(sb, 1).AppendLine("{");
@@ -179,7 +184,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			sb.AppendLine();
-			Indent(sb, 2).AppendLine("public SnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth)");
+			GenerateServiceClassConstructor(sb);
 			Indent(sb, 2).AppendLine("\t: base(communicator, auth)");
 			Indent(sb, 2).AppendLine("{");
 
@@ -238,6 +243,11 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 2).AppendLine("}");
 			Indent(sb, 1).AppendLine("}");
 			sb.AppendLine();
+		}
+
+		protected virtual void GenerateServiceClassConstructor(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public SnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth)");
 		}
 
 		protected static void GenerateModules(StringBuilder sb, MetagenRoot root)

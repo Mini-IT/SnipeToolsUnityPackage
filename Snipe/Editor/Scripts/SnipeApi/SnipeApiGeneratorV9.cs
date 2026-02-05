@@ -19,6 +19,11 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 3).AppendLine(": base(tablesProvider, configBuilder, services) { }");
 		}
 
+		protected override void GenerateContextFactoryCreateSnipeApiService(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public override AbstractSnipeApiService CreateSnipeApiService(ISnipeCommunicator communicator, AuthSubsystem auth) => new SnipeApiService(communicator, auth);");
+		}
+
 		protected override void GenerateContextFactoryCreateTables(StringBuilder sb)
 		{
 			Indent(sb, 2).AppendLine("public SnipeApiTables CreateSnipeApiTables() => new SnipeTables(_services);");
@@ -27,6 +32,11 @@ namespace MiniIT.Snipe.Unity.Editor
 		protected override void GenerateTablesConstructorSignature(StringBuilder sb)
 		{
 			Indent(sb, 2).AppendLine("public SnipeTables(ISnipeServices snipeServices) : base(snipeServices)");
+		}
+
+		protected override void GenerateServiceClassConstructor(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public SnipeApiService(ISnipeCommunicator communicator, AuthSubsystem auth)");
 		}
 	}
 }
