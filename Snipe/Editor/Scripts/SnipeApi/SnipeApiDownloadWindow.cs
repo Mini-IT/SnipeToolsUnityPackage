@@ -84,9 +84,13 @@ namespace MiniIT.Snipe.Unity.Editor
 			_downloadButton = root.Q<Button>("btn-download");
 			_authKeyWidget = root.Q<AuthKeyWidget>("auth-key-widget");
 
+#if SNIPE_9_0_OR_NEWER
+			_versionLabel.text = "Snipe API Service Version: 9 (local source generator)";
+#else
 			_versionLabel.text = "Snipe API Service Version: " + SNIPE_VERSION_SUFFIX;
 #if SNIPE_8_0_OR_NEWER
 			_versionLabel.text += " (local source generator)";
+#endif
 #endif
 
 			_directoryField.value = string.IsNullOrEmpty(_directoryPath) ? Application.dataPath : _directoryPath;
