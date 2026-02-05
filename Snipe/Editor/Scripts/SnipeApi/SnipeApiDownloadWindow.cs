@@ -238,7 +238,12 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			// Generate code from JSON
-			string generatedCode = SnipeApiGenerator.Generate(specsJson);
+#if SNIPE_9_0_OR_NEWER
+			var generator = new SnipeApiGeneratorV9();
+#else
+			var generator = new SnipeApiGenerator();
+#endif
+			string generatedCode = generator.Generate(specsJson);
 			if (string.IsNullOrEmpty(generatedCode))
 			{
 				Debug.LogError("DownloadSpecsAndGenerateSnipeApi - failed to generate code");

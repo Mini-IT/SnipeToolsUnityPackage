@@ -5,6 +5,9 @@
         "MiniIT.Snipe.Config",
         "MiniIT.Snipe.Unity",
         "MiniIT.Snipe.Services",
+        "MiniIT.Snipe.Abstractions",
+        "MiniIT.HttpClient",
+        "MiniIT.HttpClient.Abstraction",
         "fastJSON",
         "UniTask"
     ],
@@ -37,6 +40,11 @@
 			"name": "com.miniit.snipe.client",
 			"expression": "8.1.0",
 			"define": "SNIPE_8_1_OR_NEWER"
+		},
+		{
+			"name": "com.miniit.snipe.client",
+			"expression": "9.0.0",
+			"define": "SNIPE_9_0_OR_NEWER"
 		}
 	],
     "noEngineReferences": false
