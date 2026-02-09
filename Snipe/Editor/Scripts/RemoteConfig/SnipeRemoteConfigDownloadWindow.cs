@@ -323,7 +323,11 @@ namespace MiniIT.Snipe.Unity.Editor
 				return null;
 			}
 
+#if SNIPE_9_0_OR_NEWER
 			var loader = new SnipeConfigLoader(projectStringID, _appInfo, null, httpFactory);
+#else
+			var loader = new SnipeConfigLoader(projectStringID, _appInfo);
+#endif
 			var config = await loader.Load();
 			if (config == null)
 			{
