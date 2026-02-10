@@ -15,8 +15,8 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		protected override void GenerateContextFactoryConstructor(StringBuilder sb)
 		{
-			Indent(sb, 2).AppendLine("public SnipeApiContextFactory(ISnipeManager tablesProvider, SnipeConfigBuilder configBuilder, ISnipeServices services)");
-			Indent(sb, 3).AppendLine(": base(tablesProvider, configBuilder, services) { }");
+			Indent(sb, 2).AppendLine("public SnipeApiContextFactory(ISnipeManager manager, SnipeOptionsBuilder optionsBuilder)");
+			Indent(sb, 3).AppendLine(": base(manager, optionsBuilder, manager.Services) { }");
 		}
 
 		protected override void GenerateContextFactoryCreateSnipeApiService(StringBuilder sb)
@@ -26,12 +26,12 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		protected override void GenerateContextFactoryCreateTables(StringBuilder sb)
 		{
-			Indent(sb, 2).AppendLine("public SnipeApiTables CreateSnipeApiTables() => new SnipeTables(_services);");
+			Indent(sb, 2).AppendLine("public SnipeApiTables CreateSnipeApiTables() => new SnipeTables(_services, TablesOptions);");
 		}
 
 		protected override void GenerateTablesConstructorSignature(StringBuilder sb)
 		{
-			Indent(sb, 2).AppendLine("public SnipeTables(ISnipeServices snipeServices) : base(snipeServices)");
+			Indent(sb, 2).AppendLine("public SnipeTables(ISnipeServices snipeServices, TablesOptions tablesOptions) : base(snipeServices, tablesOptions)");
 		}
 
 		protected override void GenerateServiceClassConstructor(StringBuilder sb)
