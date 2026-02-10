@@ -306,11 +306,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static void GenerateMethod(StringBuilder sb, MetagenRoot root, MetagenMethod method)
-		{
-			GenerateMethod(sb, root, method, null, false);
-		}
-
 		private static void GenerateMethod(StringBuilder sb, MetagenRoot root, MetagenMethod method, MetagenGameVar[] gameVars, bool isGameVarsModule)
 		{
 			if (method == null || string.IsNullOrEmpty(method.callName) || string.IsNullOrEmpty(method.messageType))
@@ -753,16 +748,30 @@ namespace MiniIT.Snipe.Unity.Editor
 				Indent(sb, indent).AppendLine("{");
 
 				// assume arrays of simple dictionaries / scalars; keep generic
-				Indent(sb, indent + 1).Append("foreach (Dictionary<string, object> o in src_").Append(field.name).Append(')').AppendLine();
+				Indent(sb, indent + 1).Append("foreach (var o in src_").Append(field.name).Append(')').AppendLine();
+				Indent(sb, indent + 1).AppendLine("{");
+				Indent(sb, indent + 2).AppendLine("if (o is not Dictionary<string, object> d)");
+				Indent(sb, indent + 2).AppendLine("{");
+				Indent(sb, indent + 3).AppendLine("if (o is string json && json.StartsWith('{') && json.EndsWith('}'))");
+				Indent(sb, indent + 3).AppendLine("{");
+				Indent(sb, indent + 4).AppendLine("d = JsonUtility.ParseDictionary(json);");
+				Indent(sb, indent + 3).AppendLine("}");
+				Indent(sb, indent + 3).AppendLine("else");
+				Indent(sb, indent + 3).AppendLine("{");
+				Indent(sb, indent + 4).AppendLine("UnityEngine.Debug.LogError(\"SnipeApi response parsing error: Unknown item type: \" + o.GetType());");
+				Indent(sb, indent + 4).AppendLine("return;");
+				Indent(sb, indent + 3).AppendLine("}");
+				Indent(sb, indent + 2).AppendLine("}");
 				Indent(sb, indent + 2).Append(varName).Append(".Add(");
 				if (IsCustomType(root, itemType))
 				{
-					sb.Append("new ").Append(itemType).AppendLine("(o));");
+					sb.Append("new ").Append(itemType).AppendLine("(d));");
 				}
 				else
 				{
-					sb.AppendLine("o);");
+					sb.AppendLine("d);");
 				}
+				Indent(sb, indent + 1).AppendLine("}");
 
 				Indent(sb, indent).AppendLine("}");
 			}
