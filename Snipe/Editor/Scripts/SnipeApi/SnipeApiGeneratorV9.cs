@@ -23,10 +23,12 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 3).AppendLine(": base(manager, optionsBuilder, manager.Services) { }");
 			sb.AppendLine();
 			double timezoneHours = ParseTimeZoneHours(root);
-			Indent(sb, 2).Append("public override TimeSpan GetServerTimeZoneOffset() => TimeSpan.FromHours(")
+			Indent(sb, 2).AppendLine("public override TimeSpan GetServerTimeZoneOffset()");
+			Indent(sb, 3).Append("=> TimeSpan.FromHours(")
 				.Append(timezoneHours.ToString("F1", CultureInfo.InvariantCulture)).AppendLine(");");
 			sb.AppendLine();
-			Indent(sb, 2).AppendLine("public override AbstractSnipeApiService CreateSnipeApiService(ISnipeCommunicator communicator, AuthSubsystem auth) => new SnipeApiService(communicator, auth);");
+			Indent(sb, 2).AppendLine("public override AbstractSnipeApiService CreateSnipeApiService(ISnipeCommunicator communicator, AuthSubsystem auth)");
+			Indent(sb, 3).AppendLine("=> new SnipeApiService(communicator, auth);");
 			Indent(sb, 1).AppendLine("}");
 			sb.AppendLine();
 			Indent(sb, 1).AppendLine("public sealed class SnipeApiTablesFactory : AbstractSnipeApiTablesFactory");
