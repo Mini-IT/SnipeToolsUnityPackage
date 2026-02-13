@@ -107,6 +107,8 @@ namespace MiniIT.Snipe.Unity.Editor
 				}
 			};
 
+			_authKeyWidget.AuthStateChanged += SetControlsEnabled;
+
 			SetControlsEnabled(SnipeToolsConfig.IsAuthKeyValid);
 
 			_downloadButton.clicked += OnDownloadButtonPressed;
@@ -117,7 +119,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			_directoryField?.SetEnabled(enabled);
 			_browseButton?.SetEnabled(enabled);
 			_downloadButton?.SetEnabled(enabled);
-			_authKeyWidget?.SetEnabled(enabled);
 		}
 
 		private async void OnDownloadButtonPressed()
@@ -245,7 +246,7 @@ namespace MiniIT.Snipe.Unity.Editor
 #if SNIPE_9_0_OR_NEWER
 			var generator = new SnipeApiGeneratorV9();
 #else
-			var generator = new SnipeApiGenerator();
+			var generator = new SnipeApiGeneratorV8();
 #endif
 			string generatedCode = generator.Generate(specsJson);
 			if (string.IsNullOrEmpty(generatedCode))

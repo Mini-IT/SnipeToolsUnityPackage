@@ -250,7 +250,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 2).AppendLine("public SnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth)");
 		}
 
-		protected static void GenerateModules(StringBuilder sb, MetagenRoot root)
+		protected void GenerateModules(StringBuilder sb, MetagenRoot root)
 		{
 			if (root.modules == null)
 				return;
@@ -322,6 +322,20 @@ namespace MiniIT.Snipe.Unity.Editor
 					foreach (var response in module.responses)
 					{
 						GenerateResponseEvent(sb, response);
+
+						if (IsLegacyResponse(response, module, out string legacyCallName, out string legacyEventName))
+						{
+							string msgType = response.msgType;
+							string callName = response.callName;
+							response.msgType += ".legacy";
+							response.callName = legacyCallName;
+
+							GenerateResponseEvent(sb, response, callName, legacyEventName);
+
+							// Restore values for later use
+							response.msgType = msgType;
+							response.callName = callName;
+						}
 					}
 
 					GenerateOnMessageReceived(sb, root, module);
@@ -825,40 +839,52 @@ namespace MiniIT.Snipe.Unity.Editor
 			return "object";
 		}
 
-		protected static void GenerateResponseEvent(StringBuilder sb, MetagenResponse response, string obsoleteMessageCallName = null)
+		protected void GenerateResponseEvent(StringBuilder sb, MetagenResponse response, string obsoleteMessageCallName = null, string legacyEventName = null)
 		{
 			if (response == null || string.IsNullOrEmpty(response.msgType) || string.IsNullOrEmpty(response.callName))
 				return;
 
 			string handlerName = response.callName + "Handler";
-			string eventName = "On" + response.callName;
+			string eventName = legacyEventName ?? "On" + response.callName;
+
+			bool generateHandler = true;
 
 			if (obsoleteMessageCallName != null)
 			{
 				string obsoleteHandlerName = obsoleteMessageCallName + "Handler";
-				Indent(sb, 2).AppendLine($"[Obsolete(\"Use {obsoleteHandlerName} instead\")]");
-			}
-
-			Indent(sb, 2).Append("public delegate void ").Append(handlerName).AppendLine("(");
-
-
-			if (response.fields != null)
-			{
-				bool first = true;
-				foreach (var field in response.fields)
+				if (obsoleteHandlerName != handlerName)
 				{
-					if (!first)
-					{
-						Indent(sb, 0).AppendLine(",");
-					}
-					first = false;
-
-					string csType = MapTypeToCs(field.type, field.itemType);
-					Indent(sb, 3).Append(csType).Append(' ').Append(field.name);
+					Indent(sb, 2).AppendLine($"[Obsolete(\"Use {obsoleteHandlerName} instead\")]");
+				}
+				else
+				{
+					generateHandler = false;
 				}
 			}
 
-			sb.AppendLine(");");
+			if (generateHandler)
+			{
+				Indent(sb, 2).Append("public delegate void ").Append(handlerName).AppendLine("(");
+
+				if (response.fields != null)
+				{
+					bool first = true;
+					foreach (var field in response.fields)
+					{
+						if (!first)
+						{
+							Indent(sb, 0).AppendLine(",");
+						}
+
+						first = false;
+
+						string csType = MapTypeToCs(field.type, field.itemType);
+						Indent(sb, 3).Append(csType).Append(' ').Append(field.name);
+					}
+				}
+
+				sb.AppendLine(");");
+			}
 
 			if (obsoleteMessageCallName != null)
 			{
@@ -868,30 +894,21 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Indent(sb, 2).Append("public event ").Append(handlerName).Append(' ').Append(eventName).AppendLine(";")
 				.AppendLine();
-
-			// Legacy
-			if (obsoleteMessageCallName != null)
-			{
-				return;
-			}
-			if (response.msgType is "chat.msg" or "clan.msg")
-			{
-				string msgType = response.msgType;
-				string callName = response.callName;
-				response.msgType += ".legacy";
-				response.callName = "Msg";
-				GenerateResponseEvent(sb, response, callName);
-
-				// Restore values for later use
-				response.msgType = msgType;
-				response.callName = callName;
-			}
 		}
 
-		protected static void GenerateOnMessageReceived(StringBuilder sb, MetagenRoot root, MetagenModule module)
+		protected virtual bool IsLegacyResponse(MetagenResponse response, MetagenModule module, out string legacyCallName, out string legacyEventName)
+		{
+			legacyCallName = null;
+			legacyEventName = null;
+			return false;
+		}
+
+		protected void GenerateOnMessageReceived(StringBuilder sb, MetagenRoot root, MetagenModule module)
 		{
 			Indent(sb, 2).AppendLine("private void OnMessageReceived(string messageType, string errorCode, IDictionary<string, object> responseData, int requestId)");
 			Indent(sb, 2).AppendLine("{");
+			Indent(sb, 3).AppendLine("if (requestId != 0)");
+			Indent(sb, 4).AppendLine("return;").AppendLine();
 
 			bool first = true;
 			foreach (var response in module.responses)
@@ -931,32 +948,14 @@ namespace MiniIT.Snipe.Unity.Editor
 					sb.AppendLine(");");
 
 					// Legacy
-					if (response.msgType is "chat.msg" or "clan.msg")
-					{
-						Indent(sb, 4).Append("OnMsg").Append("?.Invoke(");
-						firstParam = true;
-						foreach (var field in response.fields)
-						{
-							if (!firstParam)
-							{
-								sb.Append(", ");
-							}
-							firstParam = false;
-
-							sb.Append(field.name);
-						}
-						sb.AppendLine(");");
-					}
+					GenerateLegacyMessageReceived(sb, response, module);
 				}
 				else
 				{
 					Indent(sb, 4).Append(eventName).AppendLine("?.Invoke(errorCode);");
 
 					// Legacy
-					if (response.msgType is "chat.msg" or "clan.msg")
-					{
-						Indent(sb, 4).Append("OnMsg").AppendLine("?.Invoke(errorCode);");
-					}
+					GenerateLegacyInvocationNoFields(sb, response, module);
 				}
 
 				Indent(sb, 3).AppendLine("}");
@@ -965,6 +964,14 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			Indent(sb, 2).AppendLine("}");
+		}
+
+		protected virtual void GenerateLegacyMessageReceived(StringBuilder sb, MetagenResponse response, MetagenModule module)
+		{
+		}
+
+		protected virtual void GenerateLegacyInvocationNoFields(StringBuilder sb, MetagenResponse response, MetagenModule module)
+		{
 		}
 
 		protected static bool IsCustomType(MetagenRoot root, string typeName)
