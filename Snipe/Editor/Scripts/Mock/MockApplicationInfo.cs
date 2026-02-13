@@ -1,3 +1,5 @@
+#if SNIPE_8_0_OR_NEWER
+
 #if SNIPE_8_1_OR_NEWER || (SNIPE_7_5_OR_NEWER && !SNIPE_8_0_OR_NEWER)
 #define SYSTEM_INFO
 #endif
@@ -44,3 +46,5 @@ namespace MiniIT.Snipe.Unity.Editor
 		}
 	}
 }
+
+#endif
