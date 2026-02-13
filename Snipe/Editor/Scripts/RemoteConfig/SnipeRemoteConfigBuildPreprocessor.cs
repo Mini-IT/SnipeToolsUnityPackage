@@ -1,3 +1,5 @@
+#if SNIPE_7_2_OR_NEWER
+
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.Build;
@@ -102,3 +104,5 @@ namespace MiniIT.Snipe.Unity.Editor
 		}
 	}
 }
+
+#endif
