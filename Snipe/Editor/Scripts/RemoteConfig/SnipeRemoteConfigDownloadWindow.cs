@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using MiniIT.Http;
-using MiniIT.Snipe.Logging.Unity;
 using UnityEditor;
 using UnityEngine.UIElements;
 using UnityEngine;
