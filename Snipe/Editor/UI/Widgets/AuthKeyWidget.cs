@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 
+using System;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
@@ -8,6 +9,8 @@ namespace MiniIT.Snipe.Unity.Editor
 {
 	public class AuthKeyWidget : VisualElement
 	{
+		public event Action<bool> AuthStateChanged;
+
 		private TextField _authKeyField;
 		private Label _projectStringIdLabel;
 		private Button _fetchProjectStringIdButton;
@@ -78,6 +81,8 @@ namespace MiniIT.Snipe.Unity.Editor
 				bool displayFetchButton = isValid && string.IsNullOrEmpty(psid);
 				_fetchProjectStringIdButton.style.display = displayFetchButton ? DisplayStyle.Flex : DisplayStyle.None;
 			}
+
+			AuthStateChanged?.Invoke(isValid);
 		}
 
 		private void UpdateProjectStringId()

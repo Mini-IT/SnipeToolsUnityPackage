@@ -96,6 +96,12 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			s_streamingAssetsPath = Application.streamingAssetsPath;
 
+			if (!Directory.Exists(s_streamingAssetsPath))
+			{
+				Log("Load - StreamingAssets folder does not exist. Creating...");
+				Directory.CreateDirectory(s_streamingAssetsPath);
+			}
+
 			bool tablesListReady = false;
 
 			for (int retry = 0; retry < LOADING_RETIES_COUNT; retry++)

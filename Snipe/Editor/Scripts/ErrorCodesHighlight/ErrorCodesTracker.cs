@@ -1,3 +1,5 @@
+#if UNITY_EDITOR && SNIPE_8_0_OR_NEWER
+
 using System.Collections.Generic;
 using MiniIT.Snipe.Debugging;
 
@@ -18,3 +20,5 @@ namespace MiniIT.Snipe.Unity.Editor
 		}
 	}
 }
+
+#endif

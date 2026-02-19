@@ -10,14 +10,14 @@ namespace MiniIT.Snipe.Unity.Editor
 	/// Generates a strongly-typed <c>SnipeApiService.cs</c> bindings file from API specs JSON
 	/// that mirrors the server-side API.
 	/// </summary>
-	public static class SnipeApiGenerator
+	public class SnipeApiGenerator
 	{
 		/// <summary>
 		/// Generates C# code from the provided specs JSON string.
 		/// </summary>
 		/// <param name="specsJson">The API specs JSON string.</param>
 		/// <returns>The generated C# code as a string, or null if generation failed.</returns>
-		public static string Generate(string specsJson)
+		public string Generate(string specsJson)
 		{
 			if (string.IsNullOrEmpty(specsJson))
 			{
@@ -47,7 +47,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		#region Code generation
 
-		private static string GenerateCode(MetagenRoot root)
+		protected virtual string GenerateCode(MetagenRoot root)
 		{
 			var sb = new StringBuilder(64 * 1024);
 
@@ -65,7 +65,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			return sb.ToString();
 		}
 
-		private static void GenerateFileHeader(StringBuilder sb, MetagenRoot root)
+		protected virtual void GenerateFileHeader(StringBuilder sb, MetagenRoot root)
 		{
 			string projectId = string.IsNullOrEmpty(root.projectStringID) ? root.projectID.ToString() : root.projectStringID;
 			string version = string.IsNullOrEmpty(root.snipeVersion) ? "8.0" : root.snipeVersion;
@@ -84,28 +84,33 @@ namespace MiniIT.Snipe.Unity.Editor
 			sb.AppendLine("using System;");
 			sb.AppendLine("using System.Collections.Generic;");
 			sb.AppendLine("using System.Collections;");
+			GenerateExtraUsings(sb);
 			sb.AppendLine("using MiniIT.Snipe.Configuration;");
 			sb.AppendLine("using MiniIT.Threading;");
 			sb.AppendLine();
 		}
 
-		private static void GenerateNamespaceOpen(StringBuilder sb)
+		protected virtual void GenerateExtraUsings(StringBuilder sb)
+		{
+			// Override in derived classes to add extra usings
+		}
+
+		protected static void GenerateNamespaceOpen(StringBuilder sb)
 		{
 			sb.AppendLine("namespace MiniIT.Snipe.Api");
 			sb.AppendLine("{");
 		}
 
-		private static void GenerateNamespaceClose(StringBuilder sb)
+		protected static void GenerateNamespaceClose(StringBuilder sb)
 		{
 			sb.AppendLine("}");
 		}
 
-		private static void GenerateContextFactory(StringBuilder sb, MetagenRoot root)
+		protected virtual void GenerateContextFactory(StringBuilder sb, MetagenRoot root)
 		{
 			Indent(sb, 1).AppendLine("public sealed class SnipeApiContextFactory : AbstractSnipeApiContextFactory, ISnipeContextAndTablesFactory");
 			Indent(sb, 1).AppendLine("{");
-			Indent(sb, 2).AppendLine("public SnipeApiContextFactory(ISnipeManager tablesProvider, SnipeConfigBuilder configBuilder)");
-			Indent(sb, 3).AppendLine(": base(tablesProvider, configBuilder) { }");
+			GenerateContextFactoryConstructor(sb);
 			sb.AppendLine();
 
 			// Parse timezone from spec (format: "+0300" or "-0500")
@@ -128,13 +133,29 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Indent(sb, 2).Append("public override TimeSpan GetServerTimeZoneOffset() => TimeSpan.FromHours(")
 				.Append(timezoneHours.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)).AppendLine(");");
-			Indent(sb, 2).AppendLine("public override AbstractSnipeApiService CreateSnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth) => new SnipeApiService(communicator, auth);");
-			Indent(sb, 2).AppendLine("public SnipeApiTables CreateSnipeApiTables() => new SnipeTables();");
+			GenerateContextFactoryCreateSnipeApiService(sb);
+			GenerateContextFactoryCreateTables(sb);
 			Indent(sb, 1).AppendLine("}");
 			sb.AppendLine();
 		}
 
-		private static void GenerateExtensions(StringBuilder sb)
+		protected virtual void GenerateContextFactoryConstructor(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public SnipeApiContextFactory(ISnipeManager tablesProvider, SnipeConfigBuilder configBuilder)");
+			Indent(sb, 3).AppendLine(": base(tablesProvider, configBuilder) { }");
+		}
+
+		protected virtual void GenerateContextFactoryCreateSnipeApiService(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public override AbstractSnipeApiService CreateSnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth) => new SnipeApiService(communicator, auth);");
+		}
+
+		protected virtual void GenerateContextFactoryCreateTables(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public SnipeApiTables CreateSnipeApiTables() => new SnipeTables();");
+		}
+
+		protected static void GenerateExtensions(StringBuilder sb)
 		{
 			Indent(sb, 1).AppendLine("public static class SnipeApiExtensions");
 			Indent(sb, 1).AppendLine("{");
@@ -144,7 +165,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			sb.AppendLine();
 		}
 
-		private static void GenerateServiceClass(StringBuilder sb, MetagenRoot root)
+		protected void GenerateServiceClass(StringBuilder sb, MetagenRoot root)
 		{
 			Indent(sb, 1).AppendLine("public sealed class SnipeApiService : AbstractSnipeApiService");
 			Indent(sb, 1).AppendLine("{");
@@ -163,7 +184,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			sb.AppendLine();
-			Indent(sb, 2).AppendLine("public SnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth)");
+			GenerateServiceClassConstructor(sb);
 			Indent(sb, 2).AppendLine("\t: base(communicator, auth)");
 			Indent(sb, 2).AppendLine("{");
 
@@ -224,7 +245,12 @@ namespace MiniIT.Snipe.Unity.Editor
 			sb.AppendLine();
 		}
 
-		private static void GenerateModules(StringBuilder sb, MetagenRoot root)
+		protected virtual void GenerateServiceClassConstructor(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public SnipeApiService(SnipeCommunicator communicator, AuthSubsystem auth)");
+		}
+
+		protected void GenerateModules(StringBuilder sb, MetagenRoot root)
 		{
 			if (root.modules == null)
 				return;
@@ -296,6 +322,20 @@ namespace MiniIT.Snipe.Unity.Editor
 					foreach (var response in module.responses)
 					{
 						GenerateResponseEvent(sb, response);
+
+						if (IsLegacyResponse(response, module, out string legacyCallName, out string legacyEventName))
+						{
+							string msgType = response.msgType;
+							string callName = response.callName;
+							response.msgType += ".legacy";
+							response.callName = legacyCallName;
+
+							GenerateResponseEvent(sb, response, callName, legacyEventName);
+
+							// Restore values for later use
+							response.msgType = msgType;
+							response.callName = callName;
+						}
 					}
 
 					GenerateOnMessageReceived(sb, root, module);
@@ -306,12 +346,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static void GenerateMethod(StringBuilder sb, MetagenRoot root, MetagenMethod method)
-		{
-			GenerateMethod(sb, root, method, null, false);
-		}
-
-		private static void GenerateMethod(StringBuilder sb, MetagenRoot root, MetagenMethod method, MetagenGameVar[] gameVars, bool isGameVarsModule)
+		protected static void GenerateMethod(StringBuilder sb, MetagenRoot root, MetagenMethod method, MetagenGameVar[] gameVars, bool isGameVarsModule)
 		{
 			if (method == null || string.IsNullOrEmpty(method.callName) || string.IsNullOrEmpty(method.messageType))
 				return;
@@ -523,7 +558,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			sb.AppendLine();
 		}
 
-		private static bool HasFieldNamed(MetagenField[] fields, string name)
+		protected static bool HasFieldNamed(MetagenField[] fields, string name)
 		{
 			if (fields == null)
 				return false;
@@ -535,7 +570,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			return false;
 		}
 
-		private static void EmitGameVarAssignment(StringBuilder sb, string stringId, string propertyName, string csType, int indent)
+		protected static void EmitGameVarAssignment(StringBuilder sb, string stringId, string propertyName, string csType, int indent)
 		{
 			Indent(sb, indent).Append("if (tmp.key == \"").Append(stringId).AppendLine("\")");
 			Indent(sb, indent).AppendLine("{");
@@ -613,7 +648,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, indent).AppendLine("}");
 		}
 
-		private static string ExtractMethodName(MetagenMethod method)
+		protected static string ExtractMethodName(MetagenMethod method)
 		{
 			if (!string.IsNullOrEmpty(method.actionID))
 			{
@@ -645,7 +680,7 @@ namespace MiniIT.Snipe.Unity.Editor
 		/// <summary>
 		/// XML doc with inputs, outputs, and error codes - standard XML doc format
 		/// </summary>
-		private static void EmitMethodSummary(StringBuilder sb, MetagenMethod method)
+		protected static void EmitMethodSummary(StringBuilder sb, MetagenMethod method)
 		{
 			Indent(sb, 2).AppendLine("/// <summary>");
 			Indent(sb, 2).Append("/// __").Append(method.messageType).AppendLine("__");
@@ -726,7 +761,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 2).AppendLine("/// </summary>");
 		}
 
-		private static void GenerateOutputFieldExtraction(StringBuilder sb, MetagenRoot root, MetagenField field, int indent)
+		protected static void GenerateOutputFieldExtraction(StringBuilder sb, MetagenRoot root, MetagenField field, int indent)
 		{
 			string csType = MapTypeToCs(field.type, field.itemType);
 			string varName = field.name;
@@ -753,16 +788,30 @@ namespace MiniIT.Snipe.Unity.Editor
 				Indent(sb, indent).AppendLine("{");
 
 				// assume arrays of simple dictionaries / scalars; keep generic
-				Indent(sb, indent + 1).Append("foreach (Dictionary<string, object> o in src_").Append(field.name).Append(')').AppendLine();
+				Indent(sb, indent + 1).Append("foreach (var o in src_").Append(field.name).Append(')').AppendLine();
+				Indent(sb, indent + 1).AppendLine("{");
+				Indent(sb, indent + 2).AppendLine("if (o is not Dictionary<string, object> d)");
+				Indent(sb, indent + 2).AppendLine("{");
+				Indent(sb, indent + 3).AppendLine("if (o is string json && json.StartsWith('{') && json.EndsWith('}'))");
+				Indent(sb, indent + 3).AppendLine("{");
+				Indent(sb, indent + 4).AppendLine("d = JsonUtility.ParseDictionary(json);");
+				Indent(sb, indent + 3).AppendLine("}");
+				Indent(sb, indent + 3).AppendLine("else");
+				Indent(sb, indent + 3).AppendLine("{");
+				Indent(sb, indent + 4).AppendLine("UnityEngine.Debug.LogError(\"SnipeApi response parsing error: Unknown item type: \" + o.GetType());");
+				Indent(sb, indent + 4).AppendLine("return;");
+				Indent(sb, indent + 3).AppendLine("}");
+				Indent(sb, indent + 2).AppendLine("}");
 				Indent(sb, indent + 2).Append(varName).Append(".Add(");
 				if (IsCustomType(root, itemType))
 				{
-					sb.Append("new ").Append(itemType).AppendLine("(o));");
+					sb.Append("new ").Append(itemType).AppendLine("(d));");
 				}
 				else
 				{
-					sb.AppendLine("o);");
+					sb.AppendLine("d);");
 				}
+				Indent(sb, indent + 1).AppendLine("}");
 
 				Indent(sb, indent).AppendLine("}");
 			}
@@ -781,7 +830,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static string GetArrayItemType(string listType)
+		protected static string GetArrayItemType(string listType)
 		{
 			int start = listType.IndexOf('<');
 			int end = listType.LastIndexOf('>');
@@ -790,40 +839,52 @@ namespace MiniIT.Snipe.Unity.Editor
 			return "object";
 		}
 
-		private static void GenerateResponseEvent(StringBuilder sb, MetagenResponse response, string obsoleteMessageCallName = null)
+		protected void GenerateResponseEvent(StringBuilder sb, MetagenResponse response, string obsoleteMessageCallName = null, string legacyEventName = null)
 		{
 			if (response == null || string.IsNullOrEmpty(response.msgType) || string.IsNullOrEmpty(response.callName))
 				return;
 
 			string handlerName = response.callName + "Handler";
-			string eventName = "On" + response.callName;
+			string eventName = legacyEventName ?? "On" + response.callName;
+
+			bool generateHandler = true;
 
 			if (obsoleteMessageCallName != null)
 			{
 				string obsoleteHandlerName = obsoleteMessageCallName + "Handler";
-				Indent(sb, 2).AppendLine($"[Obsolete(\"Use {obsoleteHandlerName} instead\")]");
-			}
-
-			Indent(sb, 2).Append("public delegate void ").Append(handlerName).AppendLine("(");
-
-
-			if (response.fields != null)
-			{
-				bool first = true;
-				foreach (var field in response.fields)
+				if (obsoleteHandlerName != handlerName)
 				{
-					if (!first)
-					{
-						Indent(sb, 0).AppendLine(",");
-					}
-					first = false;
-
-					string csType = MapTypeToCs(field.type, field.itemType);
-					Indent(sb, 3).Append(csType).Append(' ').Append(field.name);
+					Indent(sb, 2).AppendLine($"[Obsolete(\"Use {obsoleteHandlerName} instead\")]");
+				}
+				else
+				{
+					generateHandler = false;
 				}
 			}
 
-			sb.AppendLine(");");
+			if (generateHandler)
+			{
+				Indent(sb, 2).Append("public delegate void ").Append(handlerName).AppendLine("(");
+
+				if (response.fields != null)
+				{
+					bool first = true;
+					foreach (var field in response.fields)
+					{
+						if (!first)
+						{
+							Indent(sb, 0).AppendLine(",");
+						}
+
+						first = false;
+
+						string csType = MapTypeToCs(field.type, field.itemType);
+						Indent(sb, 3).Append(csType).Append(' ').Append(field.name);
+					}
+				}
+
+				sb.AppendLine(");");
+			}
 
 			if (obsoleteMessageCallName != null)
 			{
@@ -833,30 +894,21 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			Indent(sb, 2).Append("public event ").Append(handlerName).Append(' ').Append(eventName).AppendLine(";")
 				.AppendLine();
-
-			// Legacy
-			if (obsoleteMessageCallName != null)
-			{
-				return;
-			}
-			if (response.msgType is "chat.msg" or "clan.msg")
-			{
-				string msgType = response.msgType;
-				string callName = response.callName;
-				response.msgType += ".legacy";
-				response.callName = "Msg";
-				GenerateResponseEvent(sb, response, callName);
-
-				// Restore values for later use
-				response.msgType = msgType;
-				response.callName = callName;
-			}
 		}
 
-		private static void GenerateOnMessageReceived(StringBuilder sb, MetagenRoot root, MetagenModule module)
+		protected virtual bool IsLegacyResponse(MetagenResponse response, MetagenModule module, out string legacyCallName, out string legacyEventName)
+		{
+			legacyCallName = null;
+			legacyEventName = null;
+			return false;
+		}
+
+		protected void GenerateOnMessageReceived(StringBuilder sb, MetagenRoot root, MetagenModule module)
 		{
 			Indent(sb, 2).AppendLine("private void OnMessageReceived(string messageType, string errorCode, IDictionary<string, object> responseData, int requestId)");
 			Indent(sb, 2).AppendLine("{");
+			Indent(sb, 3).AppendLine("if (requestId != 0)");
+			Indent(sb, 4).AppendLine("return;").AppendLine();
 
 			bool first = true;
 			foreach (var response in module.responses)
@@ -896,32 +948,14 @@ namespace MiniIT.Snipe.Unity.Editor
 					sb.AppendLine(");");
 
 					// Legacy
-					if (response.msgType is "chat.msg" or "clan.msg")
-					{
-						Indent(sb, 4).Append("OnMsg").Append("?.Invoke(");
-						firstParam = true;
-						foreach (var field in response.fields)
-						{
-							if (!firstParam)
-							{
-								sb.Append(", ");
-							}
-							firstParam = false;
-
-							sb.Append(field.name);
-						}
-						sb.AppendLine(");");
-					}
+					GenerateLegacyMessageReceived(sb, response, module);
 				}
 				else
 				{
 					Indent(sb, 4).Append(eventName).AppendLine("?.Invoke(errorCode);");
 
 					// Legacy
-					if (response.msgType is "chat.msg" or "clan.msg")
-					{
-						Indent(sb, 4).Append("OnMsg").AppendLine("?.Invoke(errorCode);");
-					}
+					GenerateLegacyInvocationNoFields(sb, response, module);
 				}
 
 				Indent(sb, 3).AppendLine("}");
@@ -932,7 +966,15 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 2).AppendLine("}");
 		}
 
-		private static bool IsCustomType(MetagenRoot root, string typeName)
+		protected virtual void GenerateLegacyMessageReceived(StringBuilder sb, MetagenResponse response, MetagenModule module)
+		{
+		}
+
+		protected virtual void GenerateLegacyInvocationNoFields(StringBuilder sb, MetagenResponse response, MetagenModule module)
+		{
+		}
+
+		protected static bool IsCustomType(MetagenRoot root, string typeName)
 		{
 			foreach (var type in root.types)
 			{
@@ -945,7 +987,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			return false;
 		}
 
-		private static void GenerateTypes(StringBuilder sb, MetagenRoot root)
+		protected static void GenerateTypes(StringBuilder sb, MetagenRoot root)
 		{
 			if (root.types == null)
 				return;
@@ -1083,7 +1125,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static void GenerateUserAttributes(StringBuilder sb, MetagenRoot root)
+		protected static void GenerateUserAttributes(StringBuilder sb, MetagenRoot root)
 		{
 			if (root.userAttributes == null || root.userAttributes.Length == 0)
 				return;
@@ -1123,7 +1165,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			sb.AppendLine();
 		}
 
-		private static void GenerateTables(StringBuilder sb, MetagenRoot root)
+		protected virtual void GenerateTables(StringBuilder sb, MetagenRoot root)
 		{
 			bool hasTables = root.tables != null && root.tables.Length > 0;
 
@@ -1148,7 +1190,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			// Constructor
-			Indent(sb, 2).AppendLine("public SnipeTables()");
+			GenerateTablesConstructorSignature(sb);
 			Indent(sb, 2).AppendLine("{");
 
 			if (hasTables)
@@ -1174,7 +1216,12 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static void GenerateTableItemClasses(StringBuilder sb, MetagenRoot root)
+		protected virtual void GenerateTablesConstructorSignature(StringBuilder sb)
+		{
+			Indent(sb, 2).AppendLine("public SnipeTables()");
+		}
+
+		protected static void GenerateTableItemClasses(StringBuilder sb, MetagenRoot root)
 		{
 			// Table item classes
 			HashSet<string> uniqueTableItemTypes = new HashSet<string>();
@@ -1269,14 +1316,14 @@ namespace MiniIT.Snipe.Unity.Editor
 		#region Helpers
 
 
-		private static StringBuilder Indent(StringBuilder sb, int level)
+		protected static StringBuilder Indent(StringBuilder sb, int level)
 		{
 			for (int i = 0; i < level; i++)
 				sb.Append('\t');
 			return sb;
 		}
 
-		private static string EscapeXml(string text)
+		protected static string EscapeXml(string text)
 		{
 			if (string.IsNullOrEmpty(text))
 				return string.Empty;
@@ -1287,7 +1334,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				.Replace(">", "&gt;");
 		}
 
-		private static string MapTypeToCs(string type, string itemType)
+		protected static string MapTypeToCs(string type, string itemType)
 		{
 			if (string.IsNullOrEmpty(type))
 				return "object";
@@ -1323,7 +1370,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 		}
 
-		private static string GetTypeDisplayName(string csType)
+		protected static string GetTypeDisplayName(string csType)
 		{
 			if (string.IsNullOrEmpty(csType))
 				return "object";
@@ -1359,7 +1406,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		#region JSON Parsing
 
-		private static MetagenRoot ParseJson(string json)
+		protected static MetagenRoot ParseJson(string json)
 		{
 			try
 			{
@@ -1377,7 +1424,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 		#region Spec DTOs
 
-		private sealed class MetagenRoot
+		protected sealed class MetagenRoot
 		{
 			public int projectID;
 			public string projectStringID;
@@ -1393,7 +1440,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			public MetagenMergeableRequest[] mergeableRequests;
 		}
 
-		private sealed class MetagenModule
+		protected sealed class MetagenModule
 		{
 			public string name;
 			public bool hasResponses;
@@ -1401,7 +1448,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			public MetagenResponse[] responses;
 		}
 
-		private sealed class MetagenMethod
+		protected sealed class MetagenMethod
 		{
 			public string callName;
 			public string messageType;
@@ -1413,7 +1460,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			public bool mergeable;
 		}
 
-		private sealed class MetagenResponse
+		protected sealed class MetagenResponse
 		{
 			public string msgType;
 			public string callName;
@@ -1421,7 +1468,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			public MetagenField[] fields;
 		}
 
-		private sealed class MetagenField
+		protected sealed class MetagenField
 		{
 			public string name;
 			public string type;
@@ -1430,20 +1477,20 @@ namespace MiniIT.Snipe.Unity.Editor
 			public string description;
 		}
 
-		private sealed class MetagenType
+		protected sealed class MetagenType
 		{
 			public string name;
 			public MetagenField[] fields;
 		}
 
-		private sealed class MetagenTable
+		protected sealed class MetagenTable
 		{
 			public string stringID;
 			public string itemClass;
 			public MetagenTableField[] fields;
 		}
 
-		private sealed class MetagenTableField
+		protected sealed class MetagenTableField
 		{
 			public string id;
 			public string name;
@@ -1451,13 +1498,13 @@ namespace MiniIT.Snipe.Unity.Editor
 			public bool isAttr;
 		}
 
-		private sealed class MetagenMergeableRequest
+		protected sealed class MetagenMergeableRequest
 		{
 			public string messageType;
 			public Dictionary<string, string> payload;
 		}
 
-		private sealed class MetagenUserAttribute
+		protected sealed class MetagenUserAttribute
 		{
 			public string stringID;
 			public string type;
@@ -1466,7 +1513,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			public string clientWrite;
 		}
 
-		private sealed class MetagenGameVar
+		protected sealed class MetagenGameVar
 		{
 			public string stringID;
 			public string type;
