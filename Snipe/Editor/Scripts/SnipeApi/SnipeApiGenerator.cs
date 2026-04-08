@@ -823,9 +823,19 @@ namespace MiniIT.Snipe.Unity.Editor
 			else
 			{
 				// custom type / json object – try dictionary-based
+				string tmpObjName = field.name + "Obj";
+				string tmpDictName = field.name + "Dict";
+				string dataName = field.name + "Data";
+				Indent(sb, indent).Append("var ").Append(dataName).Append(" = ")
+					.Append("responseData.TryGetValue(\"").Append(field.name)
+					.Append("\", out object ").Append(tmpObjName).Append(") && ")
+					.Append(tmpObjName).Append(" is Dictionary<string, object> ").AppendLine(tmpDictName);
+				Indent(sb, indent + 1).Append("? ").AppendLine(tmpDictName);
+				Indent(sb, indent + 1).AppendLine(": default;");
+
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
 					.Append(" = new ").Append(csType)
-					.Append("(responseData[\"").Append(field.name).Append("\"] as Dictionary<string, object>);")
+					.Append("(").Append(dataName).Append(");")
 					.AppendLine();
 			}
 		}
