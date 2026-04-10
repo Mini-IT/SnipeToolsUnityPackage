@@ -112,6 +112,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			var root = rootVisualElement;
 			UIUtility.LoadUI(root, "SnipeRemoteConfigDownloadWindow", "base");
 
+			var authKeyWidgetContainer = root.Q<VisualElement>("auth-key-widget-container");
 			var toggleLoadDefault = root.Q<Toggle>("load-on-build-toggle");
 			var sectionRuntime = root.Q<VisualElement>("runtime-config-section");
 			var sectionBuildtime = root.Q<VisualElement>("buildtime-config-section");
@@ -124,6 +125,20 @@ namespace MiniIT.Snipe.Unity.Editor
 			var downloadBuildtimeButton = root.Q<Button>("btn-download-buildtime");
 			_targetPlatformDropdown = root.Q<DropdownField>("target-platform");
 			_contentField = root.Q<TextField>("content");
+
+			var authKeyWidget = new AuthKeyWidget
+			{
+				name = "auth-key-widget",
+			};
+
+			if (authKeyWidgetContainer != null)
+			{
+				authKeyWidgetContainer.Add(authKeyWidget);
+			}
+			else
+			{
+				root.Insert(0, authKeyWidget);
+			}
 
 			_contentField.isReadOnly = true;
 			_contentField.multiline = true;

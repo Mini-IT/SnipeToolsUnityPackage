@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <ui:VisualElement class="root">
-        <MiniIT.Snipe.Unity.Editor.AuthKeyWidget />
+        <ui:VisualElement name="auth-key-widget-container" />
         <ui:VisualElement class="spacer" />
         <ui:Toggle name="load-on-build-toggle" label="Load Config On Build" />
         <ui:VisualElement class="spacer" />

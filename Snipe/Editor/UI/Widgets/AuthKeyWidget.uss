@@ -7,7 +7,6 @@
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 6px;
 }
 
 #project-string-id {
@@ -18,7 +17,6 @@
 	padding: 6px;
 	border-left-width: 3px;
 	border-left-color: #6b6b6b;
-	border-left-style: solid;
 	background-color: rgba(107,107,107,0.08);
 }
 
@@ -26,4 +24,3 @@
 	border-left-color: #c94040;
 	background-color: rgba(201,64,64,0.08);
 }
-

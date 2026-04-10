@@ -78,11 +78,24 @@ namespace MiniIT.Snipe.Unity.Editor
 			var root = rootVisualElement;
 			UIUtility.LoadUI(root, "SnipeApiDownloadWindow", "base");
 
+			var authKeyWidgetContainer = root.Q<VisualElement>("auth-key-widget-container");
 			_directoryField = root.Q<TextField>("directory");
 			_browseButton = root.Q<Button>("btn-browse");
 			_versionLabel = root.Q<Label>("version-label");
 			_downloadButton = root.Q<Button>("btn-download");
-			_authKeyWidget = root.Q<AuthKeyWidget>("auth-key-widget");
+			_authKeyWidget = new AuthKeyWidget
+			{
+				name = "auth-key-widget",
+			};
+
+			if (authKeyWidgetContainer != null)
+			{
+				authKeyWidgetContainer.Add(_authKeyWidget);
+			}
+			else
+			{
+				root.Insert(0, _authKeyWidget);
+			}
 
 #if SNIPE_9_0_OR_NEWER
 			_versionLabel.text = "Snipe API Service Version: 9 (local source generator)";
