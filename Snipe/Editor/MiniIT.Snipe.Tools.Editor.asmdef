@@ -8,6 +8,7 @@
         "MiniIT.Snipe.Abstractions",
         "MiniIT.HttpClient",
         "MiniIT.HttpClient.Abstraction",
+		"MiniIT.Logging",
         "fastJSON",
         "UniTask"
     ],

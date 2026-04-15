@@ -6,7 +6,9 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MiniIT.Http;
+using MiniIT.Logging.Unity;
 using UnityEditor;
 using UnityEngine.UIElements;
 using UnityEngine;
@@ -338,7 +340,13 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 #if SNIPE_9_0_OR_NEWER
-			var loader = new SnipeConfigLoader(projectStringID, _appInfo, null, httpFactory);
+			var logger = LoggerFactory.Create(builder =>
+			{
+				builder.SetMinimumLevel(LogLevel.Trace);
+				builder.AddUnityLogger(options =>
+					options.MinimumLogLevelProvider = new ConstantMinimumLogLevelProvider(LogLevel.Trace));
+			}).CreateLogger(nameof(SnipeConfigLoader));
+			var loader = new SnipeConfigLoader(projectStringID, _appInfo, logger, httpFactory);
 #else
 			var loader = new SnipeConfigLoader(projectStringID, _appInfo);
 #endif
