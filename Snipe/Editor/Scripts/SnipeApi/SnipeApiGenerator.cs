@@ -283,7 +283,7 @@ namespace MiniIT.Snipe.Unity.Editor
 						if (gv == null || string.IsNullOrEmpty(gv.property))
 							continue;
 
-						string csType = MapTypeToCs(!string.IsNullOrEmpty(gv.resolvedType) ? gv.resolvedType : gv.type, null);
+						string csType = GetGameVarCsType(gv);
 						Indent(sb, 2).Append("public ").Append(csType).Append(' ').Append(gv.property).AppendLine(" { get; private set; }");
 					}
 					sb.AppendLine();
@@ -485,7 +485,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					if (gv == null || string.IsNullOrEmpty(gv.stringID) || string.IsNullOrEmpty(gv.property))
 						continue;
 
-					string csType = MapTypeToCs(!string.IsNullOrEmpty(gv.resolvedType) ? gv.resolvedType : gv.type, null);
+					string csType = GetGameVarCsType(gv);
 					EmitGameVarAssignment(sb, gv.stringID, gv.property, csType, 6);
 				}
 
@@ -832,6 +832,37 @@ namespace MiniIT.Snipe.Unity.Editor
 			if (start >= 0 && end > start)
 				return listType.Substring(start + 1, end - start - 1);
 			return "object";
+		}
+
+		protected static string GetGameVarCsType(MetagenGameVar gameVar)
+		{
+			if (gameVar == null)
+				return "object";
+
+			string type = !string.IsNullOrEmpty(gameVar.resolvedType) ? gameVar.resolvedType : gameVar.type;
+			string itemType = GetGameVarItemType(gameVar);
+			return MapTypeToCs(type, itemType);
+		}
+
+		protected static string GetGameVarItemType(MetagenGameVar gameVar)
+		{
+			if (gameVar == null || gameVar.fields == null || gameVar.fields.Length == 0)
+				return null;
+
+			for (int i = 0; i < gameVar.fields.Length; i++)
+			{
+				var field = gameVar.fields[i];
+				if (field == null)
+					continue;
+
+				if (!string.IsNullOrEmpty(field.itemType))
+					return field.itemType;
+
+				if (!string.IsNullOrEmpty(field.type))
+					return field.type;
+			}
+
+			return null;
 		}
 
 		protected static bool IsListType(string csType)
@@ -1362,7 +1393,10 @@ namespace MiniIT.Snipe.Unity.Editor
 			if (string.IsNullOrEmpty(type))
 				return "object";
 
-			switch (type)
+			type = type.Trim();
+			itemType = string.IsNullOrEmpty(itemType) ? null : itemType.Trim();
+
+			switch (type.ToLowerInvariant())
 			{
 				case "string":
 					return "string";
@@ -1379,7 +1413,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					return "bool";
 				case "array":
 					{
-						if (itemType == "byte")
+						if (string.Equals(itemType, "byte", StringComparison.OrdinalIgnoreCase))
 							return "byte[]";
 
 						string elementType = MapTypeToCs(itemType, null);
