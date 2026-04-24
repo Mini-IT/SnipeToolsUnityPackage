@@ -1419,7 +1419,7 @@ namespace MiniIT.Snipe.Unity.Editor
 						string elementType = MapTypeToCs(itemType, null);
 						return $"List<{elementType}>";
 					}
-				case "Dynamic":
+				case "dynamic":
 				case "object":
 				case "json":
 					return "object";
