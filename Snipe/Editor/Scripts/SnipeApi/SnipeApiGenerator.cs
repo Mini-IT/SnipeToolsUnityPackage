@@ -575,7 +575,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, indent).Append("if (tmp.key == \"").Append(stringId).AppendLine("\")");
 			Indent(sb, indent).AppendLine("{");
 
-			if (csType.StartsWith("List<", StringComparison.Ordinal) && csType.EndsWith(">", StringComparison.Ordinal))
+			if (IsListType(csType))
 			{
 				string itemType = GetArrayItemType(csType);
 				string srcName = "src_" + propertyName;
@@ -587,25 +587,9 @@ namespace MiniIT.Snipe.Unity.Editor
 				Indent(sb, indent + 2).Append("foreach (var ").Append(itemVar).Append(" in ").Append(srcName).AppendLine(")");
 				Indent(sb, indent + 2).AppendLine("{");
 
-				if (itemType == "int")
+				if (TryGetListItemValueExpression(itemType, itemVar, out string itemValueExpression))
 				{
-					Indent(sb, indent + 3).Append(propertyName).Append(".Add(Convert.ToInt32(").Append(itemVar).AppendLine("));");
-				}
-				else if (itemType == "float")
-				{
-					Indent(sb, indent + 3).Append(propertyName).Append(".Add(Convert.ToSingle(").Append(itemVar).AppendLine("));");
-				}
-				else if (itemType == "bool")
-				{
-					Indent(sb, indent + 3).Append(propertyName).Append(".Add(Convert.ToBoolean(").Append(itemVar).AppendLine("));");
-				}
-				else if (itemType == "string")
-				{
-					Indent(sb, indent + 3).Append(propertyName).Append(".Add(").Append(itemVar).AppendLine("?.ToString());");
-				}
-				else if (itemType == "object")
-				{
-					Indent(sb, indent + 3).Append(propertyName).Append(".Add(").Append(itemVar).AppendLine(");");
+					Indent(sb, indent + 3).Append(propertyName).Append(".Add(").Append(itemValueExpression).AppendLine(");");
 				}
 				else
 				{
@@ -778,38 +762,39 @@ namespace MiniIT.Snipe.Unity.Editor
 					.Append(" = responseData.SafeGetValue<").Append(genericType).Append(">(\"")
 					.Append(field.name).AppendLine("\");");
 			}
-			else if (field.type == "array")
+			else if (IsListType(csType))
 			{
 				string listVarName = field.name + "List";
 				string itemType = GetArrayItemType(csType);
+				string itemVarName = "o_" + field.name;
 
 				Indent(sb, indent).Append("var ").Append(varName).Append(" = new ").Append(csType).AppendLine("();");
 				Indent(sb, indent).AppendLine($"if (responseData.TryGetValue(\"{field.name}\", out var {listVarName}) && {listVarName} is IList src_{field.name})");
 				Indent(sb, indent).AppendLine("{");
 
 				// assume arrays of simple dictionaries / scalars; keep generic
-				Indent(sb, indent + 1).Append("foreach (var o in src_").Append(field.name).Append(')').AppendLine();
+				Indent(sb, indent + 1).Append("foreach (var ").Append(itemVarName).Append(" in src_").Append(field.name).Append(')').AppendLine();
 				Indent(sb, indent + 1).AppendLine("{");
-				Indent(sb, indent + 2).AppendLine("if (o is not Dictionary<string, object> d)");
-				Indent(sb, indent + 2).AppendLine("{");
-				Indent(sb, indent + 3).AppendLine("if (o is string json && json.StartsWith('{') && json.EndsWith('}'))");
-				Indent(sb, indent + 3).AppendLine("{");
-				Indent(sb, indent + 4).AppendLine("d = JsonUtility.ParseDictionary(json);");
-				Indent(sb, indent + 3).AppendLine("}");
-				Indent(sb, indent + 3).AppendLine("else");
-				Indent(sb, indent + 3).AppendLine("{");
-				Indent(sb, indent + 4).AppendLine("UnityEngine.Debug.LogError(\"SnipeApi response parsing error: Unknown item type: \" + o.GetType());");
-				Indent(sb, indent + 4).AppendLine("return;");
-				Indent(sb, indent + 3).AppendLine("}");
-				Indent(sb, indent + 2).AppendLine("}");
-				Indent(sb, indent + 2).Append(varName).Append(".Add(");
-				if (IsCustomType(root, itemType))
+				if (TryGetListItemValueExpression(itemType, itemVarName, out string itemValueExpression))
 				{
-					sb.Append("new ").Append(itemType).AppendLine("(d));");
+					Indent(sb, indent + 2).Append(varName).Append(".Add(").Append(itemValueExpression).AppendLine(");");
 				}
 				else
 				{
-					sb.AppendLine("d);");
+					Indent(sb, indent + 2).Append("if (").Append(itemVarName).AppendLine(" is not Dictionary<string, object> d)");
+					Indent(sb, indent + 2).AppendLine("{");
+					Indent(sb, indent + 3).Append("if (").Append(itemVarName).AppendLine(" is string json && json.StartsWith('{') && json.EndsWith('}'))");
+					Indent(sb, indent + 3).AppendLine("{");
+					Indent(sb, indent + 4).AppendLine("d = JsonUtility.ParseDictionary(json);");
+					Indent(sb, indent + 3).AppendLine("}");
+					Indent(sb, indent + 3).AppendLine("else");
+					Indent(sb, indent + 3).AppendLine("{");
+					Indent(sb, indent + 4).Append("UnityEngine.Debug.LogError(\"SnipeApi response parsing error: Unknown item type: \" + ")
+						.Append(itemVarName).AppendLine(".GetType());");
+					Indent(sb, indent + 4).AppendLine("return;");
+					Indent(sb, indent + 3).AppendLine("}");
+					Indent(sb, indent + 2).AppendLine("}");
+					Indent(sb, indent + 2).Append(varName).Append(".Add(new ").Append(itemType).AppendLine("(d));");
 				}
 				Indent(sb, indent + 1).AppendLine("}");
 
@@ -847,6 +832,43 @@ namespace MiniIT.Snipe.Unity.Editor
 			if (start >= 0 && end > start)
 				return listType.Substring(start + 1, end - start - 1);
 			return "object";
+		}
+
+		protected static bool IsListType(string csType)
+		{
+			return !string.IsNullOrEmpty(csType)
+				&& csType.StartsWith("List<", StringComparison.Ordinal)
+				&& csType.EndsWith(">", StringComparison.Ordinal);
+		}
+
+		protected static bool TryGetListItemValueExpression(string itemType, string valueExpression, out string itemValueExpression)
+		{
+			switch (itemType)
+			{
+				case "int":
+					itemValueExpression = $"Convert.ToInt32({valueExpression})";
+					return true;
+
+				case "float":
+					itemValueExpression = $"Convert.ToSingle({valueExpression})";
+					return true;
+
+				case "bool":
+					itemValueExpression = $"Convert.ToBoolean({valueExpression})";
+					return true;
+
+				case "string":
+					itemValueExpression = $"{valueExpression}?.ToString()";
+					return true;
+
+				case "object":
+					itemValueExpression = valueExpression;
+					return true;
+
+				default:
+					itemValueExpression = null;
+					return false;
+			}
 		}
 
 		protected void GenerateResponseEvent(StringBuilder sb, MetagenResponse response, string obsoleteMessageCallName = null, string legacyEventName = null)
@@ -1046,44 +1068,35 @@ namespace MiniIT.Snipe.Unity.Editor
 							Indent(sb, 3).Append("this.").Append(field.name).Append(" = data.SafeGetValue<")
 								.Append(genericType).Append(">(\"").Append(field.name).AppendLine("\");");
 						}
-						else if (field.type == "array")
+						else if (IsListType(csType))
 						{
 							string listType = csType;
 							string itemType = GetArrayItemType(listType);
 							string listVarName = field.name + "List";
+							string itemVarName = "o_" + field.name;
 							bool isCustomType = IsCustomType(root, itemType);
 
 							Indent(sb, 3).Append("var ").Append(field.name).Append(" = new ").Append(listType).AppendLine("();");
 							Indent(sb, 3).AppendLine($"if (data.TryGetValue(\"{field.name}\", out var {listVarName}) && {listVarName} is IList src_{field.name})");
 							Indent(sb, 3).AppendLine("{");
-							Indent(sb, 4).Append("foreach (");
-							if (isCustomType)
+							Indent(sb, 4).Append("foreach (var ").Append(itemVarName).Append(" in src_").Append(field.name).AppendLine(")");
+							Indent(sb, 4).AppendLine("{");
+							if (TryGetListItemValueExpression(itemType, itemVarName, out string itemValueExpression))
 							{
-								sb.Append("Dictionary<string, object> ");
+								Indent(sb, 5).Append(field.name).Append(".Add(").Append(itemValueExpression).AppendLine(");");
+							}
+							else if (isCustomType)
+							{
+								Indent(sb, 5).Append("if (").Append(itemVarName).Append(" is Dictionary<string, object> map_").Append(field.name).AppendLine(")");
+								Indent(sb, 5).AppendLine("{");
+								Indent(sb, 6).Append(field.name).Append(".Add(new ").Append(itemType).Append("(map_").Append(field.name).AppendLine("));");
+								Indent(sb, 5).AppendLine("}");
 							}
 							else
 							{
-								sb.Append("var ");
+								Indent(sb, 5).Append(field.name).Append(".Add(").Append(itemVarName).AppendLine(");");
 							}
-							sb.AppendLine($"o in src_{field.name})");
-
-							Indent(sb, 5).Append(field.name).Append(".Add(");
-							if (isCustomType)
-							{
-								sb.Append($"new {itemType}(o)");
-							}
-							else
-							{
-								string preparedType = itemType switch
-								{
-									"int" => "Convert.ToInt32(o)",
-									"float" => "Convert.ToSingle(o)",
-									"bool" => "Convert.ToBoolean(o)",
-									_ => "o"
-								};
-								sb.Append(preparedType);
-							}
-							sb.AppendLine(");");
+							Indent(sb, 4).AppendLine("}");
 							Indent(sb, 3).AppendLine("}");
 							Indent(sb, 3).Append("this.").Append(field.name).Append(" = ").Append(field.name).AppendLine(";");
 						}
@@ -1358,6 +1371,8 @@ namespace MiniIT.Snipe.Unity.Editor
 					return "int";
 				case "arrayint":
 					return "List<int>";
+				case "arraystring":
+					return "List<string>";
 				case "float":
 					return "float";
 				case "boolean":
