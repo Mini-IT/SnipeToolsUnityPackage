@@ -841,6 +841,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			string type = !string.IsNullOrEmpty(gameVar.resolvedType) ? gameVar.resolvedType : gameVar.type;
 			string itemType = GetGameVarItemType(gameVar);
+			NormalizeArrayAlias(ref type, ref itemType);
 			return MapTypeToCs(type, itemType);
 		}
 
@@ -863,6 +864,25 @@ namespace MiniIT.Snipe.Unity.Editor
 			}
 
 			return null;
+		}
+
+		protected static void NormalizeArrayAlias(ref string type, ref string itemType)
+		{
+			if (string.IsNullOrEmpty(type))
+				return;
+
+			switch (type.Trim().ToLowerInvariant())
+			{
+				case "arrayint":
+					type = "array";
+					itemType = "int";
+					break;
+
+				case "arraystring":
+					type = "array";
+					itemType = "string";
+					break;
+			}
 		}
 
 		protected static bool IsListType(string csType)
@@ -1403,10 +1423,6 @@ namespace MiniIT.Snipe.Unity.Editor
 				case "int":
 				case "timestamp":
 					return "int";
-				case "arrayint":
-					return "List<int>";
-				case "arraystring":
-					return "List<string>";
 				case "float":
 					return "float";
 				case "boolean":
