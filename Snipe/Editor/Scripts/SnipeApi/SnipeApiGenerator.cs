@@ -1415,6 +1415,7 @@ namespace MiniIT.Snipe.Unity.Editor
 
 			type = type.Trim();
 			itemType = string.IsNullOrEmpty(itemType) ? null : itemType.Trim();
+			NormalizeArrayAlias(ref type, ref itemType);
 
 			switch (type.ToLowerInvariant())
 			{
