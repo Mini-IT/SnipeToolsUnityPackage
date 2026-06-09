@@ -461,6 +461,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				Indent(sb, 3).AppendLine("request.Request(async (errorCode, responseData) =>");
 				Indent(sb, 3).AppendLine("{");
+				GenerateNotReadyGuard(sb, 4);
 				Indent(sb, 4).AppendLine("this.Initialized = true;");
 				Indent(sb, 4).AppendLine("await AlterTask.Yield();");
 				Indent(sb, 4).AppendLine("callback?.Invoke(errorCode, this.UserAttributes);");
@@ -469,6 +470,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				Indent(sb, 3).AppendLine("request.Request((errorCode, responseData) =>");
 				Indent(sb, 3).AppendLine("{");
+				GenerateNotReadyGuard(sb, 4);
 
 				// Build GameVariable list from responseData["data"]
 				Indent(sb, 4).AppendLine("var o_data = new List<GameVariable>();");
@@ -517,6 +519,7 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				Indent(sb, 3).AppendLine("request.Request((errorCode, responseData) =>");
 				Indent(sb, 3).AppendLine("{");
+				GenerateNotReadyGuard(sb, 4);
 
 				if (method.outputs != null && method.outputs.Length > 0)
 				{
@@ -555,6 +558,15 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 3).AppendLine("});");
 			Indent(sb, 3).AppendLine("return true;");
 			Indent(sb, 2).AppendLine("}");
+			sb.AppendLine();
+		}
+
+		protected static void GenerateNotReadyGuard(StringBuilder sb, int indent)
+		{
+			Indent(sb, indent).AppendLine("if (errorCode == SnipeErrorCodes.NOT_READY)");
+			Indent(sb, indent).AppendLine("{");
+			Indent(sb, indent + 1).AppendLine("return;");
+			Indent(sb, indent).AppendLine("}");
 			sb.AppendLine();
 		}
 
