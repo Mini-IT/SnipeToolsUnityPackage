@@ -461,7 +461,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				Indent(sb, 3).AppendLine("request.Request(async (errorCode, responseData) =>");
 				Indent(sb, 3).AppendLine("{");
-				GenerateNotReadyGuard(sb, 4);
 				Indent(sb, 4).AppendLine("this.Initialized = true;");
 				Indent(sb, 4).AppendLine("await AlterTask.Yield();");
 				Indent(sb, 4).AppendLine("callback?.Invoke(errorCode, this.UserAttributes);");
@@ -470,7 +469,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				Indent(sb, 3).AppendLine("request.Request((errorCode, responseData) =>");
 				Indent(sb, 3).AppendLine("{");
-				GenerateNotReadyGuard(sb, 4);
 
 				// Build GameVariable list from responseData["data"]
 				Indent(sb, 4).AppendLine("var o_data = new List<GameVariable>();");
@@ -519,7 +517,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			{
 				Indent(sb, 3).AppendLine("request.Request((errorCode, responseData) =>");
 				Indent(sb, 3).AppendLine("{");
-				GenerateNotReadyGuard(sb, 4);
 
 				if (method.outputs != null && method.outputs.Length > 0)
 				{
@@ -558,15 +555,6 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 3).AppendLine("});");
 			Indent(sb, 3).AppendLine("return true;");
 			Indent(sb, 2).AppendLine("}");
-			sb.AppendLine();
-		}
-
-		protected static void GenerateNotReadyGuard(StringBuilder sb, int indent)
-		{
-			Indent(sb, indent).AppendLine("if (errorCode == SnipeErrorCodes.NOT_READY)");
-			Indent(sb, indent).AppendLine("{");
-			Indent(sb, indent + 1).AppendLine("return;");
-			Indent(sb, indent).AppendLine("}");
 			sb.AppendLine();
 		}
 
@@ -812,10 +800,13 @@ namespace MiniIT.Snipe.Unity.Editor
 
 				Indent(sb, indent).AppendLine("}");
 			}
-			else if (field.type == "Dynamic")
+			else if (csType == "object")
 			{
+				string tmpObjName = field.name + "Obj";
 				Indent(sb, indent).Append(csType).Append(' ').Append(varName)
-					.Append(" = responseData[\"").Append(field.name).AppendLine("\"];");
+					.Append(" = responseData.TryGetValue(\"").Append(field.name)
+					.Append("\", out object ").Append(tmpObjName).Append(") ? ")
+					.Append(tmpObjName).AppendLine(" : default;");
 			}
 			else
 			{
@@ -1163,16 +1154,24 @@ namespace MiniIT.Snipe.Unity.Editor
 							Indent(sb, 3).AppendLine("}");
 							Indent(sb, 3).Append("this.").Append(field.name).Append(" = ").Append(field.name).AppendLine(";");
 						}
-						else if (field.type == "Dynamic")
+						else if (csType == "object")
 						{
+							string tmpObjName = field.name + "Obj";
 							Indent(sb, 3).Append("this.").Append(field.name)
-								.Append(" = data[\"").Append(field.name).AppendLine("\"];");
+								.Append(" = data.TryGetValue(\"").Append(field.name)
+								.Append("\", out object ").Append(tmpObjName).Append(") ? ")
+								.Append(tmpObjName).AppendLine(" : default;");
 						}
 						else
 						{
-							Indent(sb, 3).Append("this.").Append(field.name).Append(" = new ").Append(csType)
-								.Append("(data[\"").Append(field.name).Append("\"] as Dictionary<string, object>);")
-								.AppendLine();
+							string tmpObjName = field.name + "Obj";
+							string dataName = field.name + "Data";
+							Indent(sb, 3).Append("var ").Append(dataName)
+								.Append(" = data.TryGetValue(\"").Append(field.name)
+								.Append("\", out object ").Append(tmpObjName).Append(") ? ")
+								.Append(tmpObjName).AppendLine(" as Dictionary<string, object> : default;");
+							Indent(sb, 3).Append("this.").Append(field.name).Append(" = new ")
+								.Append(csType).Append("(").Append(dataName).AppendLine(");");
 						}
 					}
 				}
