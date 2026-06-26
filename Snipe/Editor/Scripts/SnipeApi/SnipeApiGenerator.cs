@@ -463,7 +463,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				Indent(sb, 3).AppendLine("{");
 				Indent(sb, 4).AppendLine("this.Initialized = true;");
 				Indent(sb, 4).AppendLine("await AlterTask.Yield();");
-				Indent(sb, 4).AppendLine("callback?.Invoke(errorCode, this.UserAttributes);");
+				GenerateCallbackInvocation(sb, method, 4, "this.UserAttributes");
 			}
 			else if (isVarsGetAll)
 			{
@@ -495,23 +495,12 @@ namespace MiniIT.Snipe.Unity.Editor
 				// Extract other outputs (if any) + invoke callback
 				foreach (var field in method.outputs)
 				{
-					if (field.name == "errorCode" || field.name == "data")
+					if (field.name == "errorCode" || field.name == "data" || field.name == "_version")
 						continue;
 					GenerateOutputFieldExtraction(sb, root, field, 4);
 				}
 
-				Indent(sb, 4).Append("callback?.Invoke(errorCode");
-				foreach (var field in method.outputs)
-				{
-					if (field.name == "errorCode")
-						continue;
-
-					if (field.name == "data")
-						sb.Append(", o_data");
-					else
-						sb.Append(", ").Append(field.name);
-				}
-				sb.AppendLine(");");
+				GenerateCallbackInvocation(sb, method, 4, "o_data");
 			}
 			else
 			{
@@ -530,25 +519,11 @@ namespace MiniIT.Snipe.Unity.Editor
 						GenerateOutputFieldExtraction(sb, root, field, 4);
 					}
 
-					Indent(sb, 4).Append("callback?.Invoke(errorCode");
-					foreach (var field in method.outputs)
-					{
-						// Skip errorCode in outputs since it's always the first parameter
-						if (field.name == "errorCode")
-							continue;
-						if (field.name == "_version")
-							continue;
-
-						string paramName = (method.messageType == "attr.getAll" && field.name == "data")
-							? "this.UserAttributes"
-							: field.name;
-						sb.Append(", ").Append(paramName);
-					}
-					sb.AppendLine(");");
+					GenerateCallbackInvocation(sb, method, 4);
 				}
 				else
 				{
-					Indent(sb, 4).AppendLine("callback?.Invoke(errorCode);");
+					GenerateCallbackInvocation(sb, method, 4);
 				}
 			}
 
@@ -556,6 +531,40 @@ namespace MiniIT.Snipe.Unity.Editor
 			Indent(sb, 3).AppendLine("return true;");
 			Indent(sb, 2).AppendLine("}");
 			sb.AppendLine();
+		}
+
+		protected static void GenerateCallbackInvocation(StringBuilder sb, MetagenMethod method, int indent, string dataArgument = null)
+		{
+			Indent(sb, indent).Append("callback?.Invoke(");
+
+			if (method.outputs == null || method.outputs.Length == 0)
+			{
+				sb.Append("errorCode");
+			}
+			else
+			{
+				bool first = true;
+				foreach (var field in method.outputs)
+				{
+					if (field.name == "_version")
+						continue;
+
+					if (!first)
+					{
+						sb.Append(", ");
+					}
+					first = false;
+
+					if (field.name == "errorCode")
+						sb.Append("errorCode");
+					else if (field.name == "data" && dataArgument != null)
+						sb.Append(dataArgument);
+					else
+						sb.Append(field.name);
+				}
+			}
+
+			sb.AppendLine(");");
 		}
 
 		protected static bool HasFieldNamed(MetagenField[] fields, string name)
