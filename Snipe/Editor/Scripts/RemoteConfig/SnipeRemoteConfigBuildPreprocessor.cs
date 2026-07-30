@@ -82,7 +82,7 @@ namespace MiniIT.Snipe.Unity.Editor
 					return "webglYandex";
 #elif NUTAKU
 					return "webglNutaku";
-#elif CRAZY
+#elif CRAZY_GAMES
 					return "webglCrazy";
 #elif YOUTUBE
 					return "webglYoutube";
