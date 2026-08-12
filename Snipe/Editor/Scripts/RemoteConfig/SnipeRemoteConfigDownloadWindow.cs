@@ -351,8 +351,8 @@ namespace MiniIT.Snipe.Unity.Editor
 			var loader = new SnipeConfigLoader(projectStringID, _appInfo);
 #endif
 
-#if SNIPE_9_0_10_OR_NEWER
-			var config = await loader.Load(TimeSpan.FromSeconds(4));
+#if SNIPE_9_1_OR_NEWER
+			var config = await loader.Load(TimeSpan.FromSeconds(6));
 #else
 			var config = await loader.Load();
 #endif

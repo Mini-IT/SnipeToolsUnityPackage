@@ -49,8 +49,8 @@
 		},
 		{
 			"name": "com.miniit.snipe.client",
-			"expression": "9.0.10",
-			"define": "SNIPE_9_0_10_OR_NEWER"
+			"expression": "9.1.0",
+			"define": "SNIPE_9_1_OR_NEWER"
 		}
 	],
     "noEngineReferences": false
