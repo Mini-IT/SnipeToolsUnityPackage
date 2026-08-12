@@ -34,6 +34,9 @@ namespace MiniIT.Snipe.Unity.Editor
 			None,
 			Nutaku,
 			Yandex,
+			Crazygames,
+			Youtube,
+			Tiktok,
 		}
 
 		private readonly Dictionary<string, string> _platformList = new()
@@ -54,6 +57,9 @@ namespace MiniIT.Snipe.Unity.Editor
 			["webgl"] = "WebGL",
 			["webglNutaku"] = "WebGL (Nutaku)",
 			["webglYandex"] = "WebGL (Yandex)",
+			["webglCrazygames"] = "WebGL (CrazyGames)",
+			["webglYoutube"] = "WebGL (Youtube)",
+			["webglTiktok"] = "WebGL (Tiktok)",
 			["windows"] = "Windows (UWP)",
 			["xboxone"] = "Xbox One",
 		};
