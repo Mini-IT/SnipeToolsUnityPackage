@@ -1459,6 +1459,7 @@ namespace MiniIT.Snipe.Unity.Editor
 				case "dynamic":
 				case "object":
 				case "json":
+				case "any":
 					return "object";
 
 				default:
